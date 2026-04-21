@@ -65,7 +65,7 @@
       position: relative; z-index: 1;
     }
 
-    /* ── HEADER ── */
+    /* HEADER */
     header {
       display: flex; align-items: center; justify-content: space-between;
       padding: 28px 0; margin-bottom: 24px;
@@ -129,7 +129,7 @@
     }
     .refresh-btn:hover .ring-icon { color: var(--accent); transform: rotate(30deg); }
 
-    /* ── FILTERS ── */
+    /* FILTERS */
     .filter-row {
       display: grid;
       grid-template-columns: repeat(4, 1fr) auto auto;
@@ -208,7 +208,7 @@
     }
     .toggle-wrap.active .toggle-state-text { color: var(--amber); }
 
-    /* ── STATUS BAR ── */
+    /* STATUS BAR */
     .status-bar {
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 12px; padding: 0 2px;
@@ -221,7 +221,7 @@
       font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted);
     }
 
-    /* ── TABLE ── */
+    /* TABLE */
     .table-wrapper {
       border: 1px solid var(--border); border-radius: 14px;
       overflow-x: auto;
@@ -293,7 +293,7 @@
     .badge-high   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(248,113,113,0.2); }
     .badge-high   .badge-dot { background: var(--red); }
 
-    /* ── FLAGS (dead market + volume imbalance) ── */
+    /* FLAGS (dead market + volume imbalance) */
     .flag-icon {
       display: inline-flex; align-items: center; justify-content: center;
       width: 24px; height: 24px; border-radius: 6px;
@@ -309,7 +309,7 @@
       color: var(--blue); margin-left: 5px;
     }
 
-    /* Flag tooltip — JS-positioned fixed div, bypasses overflow clipping */
+    /* Flag tooltip JS-positioned fixed div, bypasses overflow clipping */
     #flag-tooltip {
       position: fixed;
       background: var(--card); border: 1px solid var(--border);
@@ -321,7 +321,7 @@
     }
     #flag-tooltip.visible { opacity: 1; }
 
-    /* ── SEARCH ROW ── */
+    /* SEARCH ROW */
     .search-row {
       margin-bottom: 10px;
     }
@@ -361,7 +361,7 @@
     }
     #col-tooltip.visible { opacity: 1; }
 
-    /* ── SPARKLINE TOOLTIP ── */
+    /* SPARKLINE TOOLTIP */
     #sparkline-tooltip {
       position: fixed;
       background: var(--card); border: 1px solid var(--border);
@@ -485,19 +485,19 @@
 
   <div class="filter-row">
     <div class="filter-card">
-      <label class="filter-label" for="f-capital">💰 Capital</label>
+      <label class="filter-label" for="f-capital">Capital</label>
       <input class="filter-input" id="f-capital" type="text" value="50m" placeholder="50m">
     </div>
     <div class="filter-card">
-      <label class="filter-label" for="f-margin">📊 Min Margin / Item</label>
+      <label class="filter-label" for="f-margin">Min Margin / Item</label>
       <input class="filter-input" id="f-margin" type="text" value="1000" placeholder="1000">
     </div>
     <div class="filter-card">
-      <label class="filter-label" for="f-pct">📈 Min Margin %</label>
+      <label class="filter-label" for="f-pct">Min Margin %</label>
       <input class="filter-input" id="f-pct" type="text" value="1" placeholder="1">
     </div>
     <div class="filter-card">
-      <label class="filter-label" for="f-vol">🔥 Min Daily Volume</label>
+      <label class="filter-label" for="f-vol">Min Daily Volume</label>
       <input class="filter-input" id="f-vol" type="text" value="5k" placeholder="5k">
     </div>
     <div class="toggle-wrap" id="deadToggle">
@@ -560,7 +560,7 @@
 <div id="sparkline-tooltip"></div>
 
 <script>
-// ─── CONFIG ─────────────────────────────────────────────────────────────────
+// CONFIG
 const API_DIRECT  = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const CORS_PROXY  = 'https://corsproxy.io/?url=';
 const TAX         = 0.0125;
@@ -570,18 +570,18 @@ const CIRC        = 2 * Math.PI * 16;
 const DEFAULTS    = { capital: '50m', margin: '1000', pct: '1', vol: '5k' };
 
 // Competition fill-time multipliers (Low / Medium / High).
-// These are rough order-of-magnitude estimates, not exact science.
+// These are rough estimates
 const COMP_MULT   = [1.5, 3.0, 6.0];
 
 // Dead-market thresholds
-const DEAD_MARGIN_PCT    = 8;      // margin % above this is suspicious
+const DEAD_MARGIN_PCT    = 100;      // margin % above this is suspicious
 const DEAD_WEEKLY_VOL    = 10000;  // max weekly vol (using Math.max of both sides)
 const DEAD_MAX_ORDERS    = 5;      // very few orders on the book
 
 // Volume imbalance: flag if one side is this many times larger than the other
 const VOL_IMBAL_RATIO = 3;
 
-// ─── STATE ──────────────────────────────────────────────────────────────────
+// STATE
 let rawProducts    = null;   // raw API response — invalidated only on new fetch
 let cachedItems    = [];     // computeItem results at lastCapital — reused across filter changes
 let lastCapital    = -1;     // sentinel; -1 forces first compute
@@ -596,7 +596,7 @@ let isFetching     = false;
 let hideDeadMarket = false;
 let searchQuery    = '';
 
-// ─── COLUMN LABELS (shared between status bar and renderTable) ───────────────
+// COLUMN LABELS (shared between status bar and renderTable)
 const COL_LABELS = {
   name: 'Item', buyPrice: 'Buy Order', sellPrice: 'Sell Order',
   netMargin: 'Margin/Item', marginPct: 'Margin %', totalProfit: 'Est. Profit',
@@ -605,8 +605,7 @@ const COL_LABELS = {
   fillHrsRealistic: 'Fill (Real)', compLevel: 'Competition',
 };
 
-// ─── PARSE SHORTHAND NUMBERS ─────────────────────────────────────────────────
-// "1.5k" → 1500 | "1.89m" → 1890000 | "2b" → 2e9 | "50" → 50
+// PARSE SHORTHAND NUMBERS
 function parseVal(raw) {
   if (raw == null) return 0;
   const s = String(raw).trim().toLowerCase().replace(/,/g, '');
@@ -620,7 +619,7 @@ function parseVal(raw) {
   return n;
 }
 
-// ─── FORMAT HELPERS ──────────────────────────────────────────────────────────
+// FORMAT HELPERS
 const fmt = {
   coins(n) {
     if (!isFinite(n) || n === 0) return '—';
@@ -645,7 +644,7 @@ const fmt = {
   },
 };
 
-// ─── GET FILTERS ─────────────────────────────────────────────────────────────
+// GET FILTERS
 function getFilters() {
   return {
     capital:   parseVal(document.getElementById('f-capital').value) || 0,
@@ -655,7 +654,7 @@ function getFilters() {
   };
 }
 
-// ─── COMPUTE ONE ITEM ────────────────────────────────────────────────────────
+// COMPUTE ONE ITEM
 // Pure function — only depends on product data + capital.
 // Called once per product per capital value; results are cached in cachedItems.
 function computeItem(id, product, capital) {
@@ -695,7 +694,7 @@ function computeItem(id, product, capital) {
   const volImbalance = (minWeekly > 0 && maxWeekly / minWeekly > VOL_IMBAL_RATIO)
     || (minWeekly === 0 && maxWeekly > 0);
 
-  const maxQty       = Math.min(MAX_QTY, Math.floor(capital / buyPrice));
+  const maxQty = Math.min(MAX_QTY, Math.floor(capital / buyPrice));
   if (maxQty <= 0) return null;
 
   const totalProfit   = netMargin * maxQty;
@@ -716,12 +715,12 @@ function computeItem(id, product, capital) {
   // and you get a smaller share of incoming sell volume.
   const fillHrsRealistic = fillHrs >= 9999 ? 99999 : fillHrs * COMP_MULT[compLevel];
 
-  // Coins per hour (based on realistic fill — more useful for comparing flips of different scale)
+  // Coins per hour based on realistic fill
   const coinsPerHour = (fillHrsRealistic > 0 && fillHrsRealistic < 9999)
     ? totalProfit / fillHrsRealistic
     : 0;
 
-  // Dead market: wide margin + tiny total volume + very few orders = likely planted spread
+  // Dead market: wide margin + tiny total volume + very few orders
   // Using maxWeekly for this check (if even the busier side is dead, the item truly has no activity)
   const isManipulated = marginPct > DEAD_MARGIN_PCT
     && maxWeekly < DEAD_WEEKLY_VOL
@@ -739,7 +738,7 @@ function computeItem(id, product, capital) {
   };
 }
 
-// ─── PRECOMPUTE ALL ITEMS FOR GIVEN CAPITAL ──────────────────────────────────
+// PRECOMPUTE ALL ITEMS FOR GIVEN CAPITAL
 // Only re-run when capital changes or on a fresh fetch.
 function computeAllItems(capital) {
   if (!rawProducts) return;
@@ -751,7 +750,7 @@ function computeAllItems(capital) {
   }
 }
 
-// ─── APPLY FILTERS + RENDER ──────────────────────────────────────────────────
+// APPLY FILTERS + RENDER
 function applyFilters(fromFetch = false) {
   if (!rawProducts) return;
   const filters = getFilters();
@@ -761,7 +760,6 @@ function applyFilters(fromFetch = false) {
     computeAllItems(filters.capital);
   }
 
-  // Filter the cheap way — no re-parsing of the API data
   let items = cachedItems.filter(item =>
     item.netMargin   >= filters.minMargin &&
     item.marginPct   >= filters.minPct    &&
@@ -786,8 +784,8 @@ function applyFilters(fromFetch = false) {
   document.getElementById('sortLabel').textContent = COL_LABELS[sortCol] || sortCol;
 }
 
-// ─── SORT ────────────────────────────────────────────────────────────────────
-// Always operates on a shallow copy — never mutates allItems.
+// SORT
+// Always operates on a shallow copy
 function sorted() {
   return [...allItems].sort((a, b) => {
     let av = a[sortCol], bv = b[sortCol];
@@ -797,11 +795,11 @@ function sorted() {
   });
 }
 
-// ─── RENDER TABLE ────────────────────────────────────────────────────────────
+// RENDER TABLE
 function renderTable(animate) {
   let items = sorted();
 
-  // Apply search filter (display-only — doesn't affect score normalization)
+  // Apply search filter
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     items = items.filter(i =>
@@ -819,7 +817,7 @@ function renderTable(animate) {
       ? `<p>No items match "<strong style="color:var(--text)">${searchQuery}</strong>".</p>
          <p>Try a different search term or clear the search bar.</p>`
       : `<p>No flips match your current filters.</p>
-         <p>Try lowering the margin %, volume, or flat margin requirements.</p>`;
+         <p>Try changing the margin %, volume, or flat margin requirements.</p>`;
     tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="13">
       <div class="empty-state">
         <div class="empty-icon">🪙</div>
@@ -846,7 +844,7 @@ function renderTable(animate) {
 
     // Dead market flag
     const deadFlag = item.isManipulated
-      ? `<span class="flag-icon flag-dead" data-tip="Spread >8% but only ${fmt.coins(Math.max(item.sellMovingWeek, item.buyMovingWeek))} items moved last week with <${DEAD_MAX_ORDERS} orders — likely a planted spread or completely dead market.">⚠</span>`
+      ? `<span class="flag-icon flag-dead" data-tip="Spread >100% but only ${fmt.coins(Math.max(item.sellMovingWeek, item.buyMovingWeek))} items moved last week with <${DEAD_MAX_ORDERS} orders.">⚠</span>`
       : '';
 
     return `<tr data-id="${item.id}" style="transition-delay:${delay}ms">
@@ -895,9 +893,9 @@ function renderTable(animate) {
   });
 }
 
-// ─── SKELETON ────────────────────────────────────────────────────────────────
+// SKELETON
 function showSkeletons() {
-  // 13 columns (score removed)
+  // 13 columns
   const widths = [140, 70, 70, 65, 55, 85, 80, 85, 90, 55, 55, 90, 10];
   document.getElementById('tableBody').innerHTML =
     Array(10).fill(0).map(() =>
@@ -907,7 +905,7 @@ function showSkeletons() {
     ).join('');
 }
 
-// ─── FETCH ───────────────────────────────────────────────────────────────────
+// FETCH
 // Outer function guards against concurrent calls; inner handles CORS retry.
 async function fetchData() {
   if (isFetching) return;
@@ -940,7 +938,7 @@ async function _fetchInner() {
     if (!useCorsProxy) {
       useCorsProxy = true;
       console.info('[WeirdFlip] Direct fetch blocked — retrying via CORS proxy…');
-      return _fetchInner(); // recurse; isFetching stays true (correct)
+      return _fetchInner(); // recurse; isFetching stays true
     }
     setStatus('error');
     showError(`Could not reach Hypixel API — ${err.message}. Will retry in ${REFRESH_SEC}s.`);
@@ -949,13 +947,12 @@ async function _fetchInner() {
   }
 
   rawProducts = data.products;
-  // Force a full recompute on new fetch data by resetting lastCapital.
-  // Capital may not have changed but the prices certainly have.
+  // Force a full recompute on new fetch data by resetting lastCapital
   lastCapital = -1;
   applyFilters(true);
 }
 
-// ─── STATUS ──────────────────────────────────────────────────────────────────
+// STATUS
 function setStatus(s) {
   const dot = document.getElementById('liveDot');
   const lbl = document.getElementById('liveStatus');
@@ -972,7 +969,7 @@ function hideError() {
   document.getElementById('errorBanner').style.display = 'none';
 }
 
-// ─── TIMER ───────────────────────────────────────────────────────────────────
+// TIMER
 function startTimer() {
   timerCount = REFRESH_SEC;
   if (timerInterval) clearInterval(timerInterval);
@@ -989,7 +986,7 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
   fetchData().then(startTimer);
 });
 
-// ─── SORT HEADERS ────────────────────────────────────────────────────────────
+// SORT HEADERS
 document.querySelectorAll('th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
@@ -1003,7 +1000,7 @@ document.querySelectorAll('th[data-col]').forEach(th => {
   });
 });
 
-// ─── FILTER INPUTS ───────────────────────────────────────────────────────────
+// FILTER INPUTS
 let filterDebounce;
 function onFilterChange() {
   ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id => {
@@ -1017,7 +1014,7 @@ function onFilterChange() {
 ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
   document.getElementById(id).addEventListener('input', onFilterChange));
 
-// ─── RESET ───────────────────────────────────────────────────────────────────
+// RESET
 document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('f-capital').value = DEFAULTS.capital;
   document.getElementById('f-margin').value  = DEFAULTS.margin;
@@ -1033,9 +1030,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   applyFilters(false);
 });
 
-// ─── DEAD MARKET TOGGLE ──────────────────────────────────────────────────────
-// Calls applyFilters (not just renderTable) so score normalization also
-// excludes dead items from the percentile calculation.
+// DEAD MARKET TOGGLE
 document.getElementById('deadToggle').addEventListener('click', () => {
   hideDeadMarket = !hideDeadMarket;
   document.getElementById('deadToggle').classList.toggle('active', hideDeadMarket);
@@ -1043,7 +1038,7 @@ document.getElementById('deadToggle').addEventListener('click', () => {
   applyFilters(false);
 });
 
-// ─── COLUMN HEADER TOOLTIPS (500ms delay) ────────────────────────────────────
+// COLUMN HEADER TOOLTIPS (500ms delay)
 const colTooltip = document.getElementById('col-tooltip');
 let tipTimer = null;
 
@@ -1070,13 +1065,13 @@ document.querySelectorAll('th[data-tip]').forEach(th => {
   });
 });
 
-// ─── SEARCH ──────────────────────────────────────────────────────────────────
+// SEARCH
 let searchDebounce;
 document.getElementById('f-search').addEventListener('input', e => {
   searchQuery = e.target.value.trim();
   document.getElementById('searchCard').classList.toggle('has-value', searchQuery.length > 0);
   clearTimeout(searchDebounce);
-  // Shorter debounce for search — no recompute, just re-render
+  // Shorter debounce for search since it's just a re-render
   searchDebounce = setTimeout(() => renderTable(false), 120);
 });
 
@@ -1088,7 +1083,7 @@ document.getElementById('searchClear').addEventListener('click', () => {
   document.getElementById('f-search').focus();
 });
 
-// ─── FLAG TOOLTIPS (event delegation on tbody) ────────────────────────────────
+// FLAG TOOLTIPS (event delegation on tbody)
 // Using a JS-positioned fixed div so table overflow clipping is irrelevant.
 const flagTooltip = document.getElementById('flag-tooltip');
 let flagTipTimer  = null;
@@ -1122,9 +1117,9 @@ document.getElementById('tableBody').addEventListener('mouseout', e => {
   flagTooltip.classList.remove('visible');
 });
 
-// ─── SPARKLINE ───────────────────────────────────────────────────────────────
-// Shows a 7-day buy/sell price chart on row hover, with a 500ms delay.
-// Data fetched from CoflNet's public bazaar history API; cached per item.
+// SPARKLINE
+// Shows a 7-day buy/sell price chart on row hover, with a 500ms delay
+// Data fetched from CoflNet's public bazaar history API; cached per item
 const SPARK_API      = id => `https://sky.coflnet.com/api/bazaar/${encodeURIComponent(id)}/history`;
 const sparkCache     = {};   // itemId → normalised [{t, buy, sell}, …]
 const sparkInFlight  = {};   // itemId → true  (dedup concurrent fetches)
@@ -1132,7 +1127,7 @@ const sparkTooltip   = document.getElementById('sparkline-tooltip');
 let   sparkTimer     = null;
 let   sparkActiveId  = null;
 
-// ── Normalise whatever CoflNet sends back into [{t, buy, sell}]
+// Normalise whatever CoflNet sends back into [{t, buy, sell}]
 function normaliseSparkData(raw) {
   if (!Array.isArray(raw) || !raw.length) return null;
   const sample = raw[0];
@@ -1149,7 +1144,7 @@ function normaliseSparkData(raw) {
   return pts.filter(p => p.t >= cutoff);
 }
 
-// ── Build SVG sparkline from normalised points
+// Build SVG sparkline from normalised points
 function buildSparkSVG(pts) {
   const W = 220, H = 72, PAD = 4;
   if (!pts || pts.length < 2) return null;
@@ -1188,7 +1183,7 @@ function buildSparkSVG(pts) {
   </svg>`;
 }
 
-// ── Render sparkline into the tooltip (data already fetched)
+// Render sparkline into the tooltip (data already fetched)
 function renderSparkContent(id, pts) {
   if (!pts || pts.length < 2) {
     sparkTooltip.innerHTML =
@@ -1220,7 +1215,7 @@ function renderSparkContent(id, pts) {
     </div>`;
 }
 
-// ── Position the sparkline tooltip near the hovered row
+// Position the sparkline tooltip near the hovered row
 function positionSparkTooltip(row) {
   const r  = row.getBoundingClientRect();
   const tw = 256, th = 160; // approx dimensions
@@ -1232,7 +1227,7 @@ function positionSparkTooltip(row) {
   sparkTooltip.style.top  = Math.max(8, top)  + 'px';
 }
 
-// ── Fetch + cache, then render if tooltip is still for this item
+// Fetch + cache, then render if tooltip is still for this item
 async function fetchAndRenderSparkline(id, row) {
   if (sparkInFlight[id]) return;
   sparkInFlight[id] = true;
@@ -1255,7 +1250,7 @@ async function fetchAndRenderSparkline(id, row) {
   }
 }
 
-// ── Show sparkline after 500ms hover
+// Show sparkline after 500ms hover
 function onRowMouseenter(e) {
   const row = e.currentTarget;
   const id  = row.dataset.id;
@@ -1282,7 +1277,7 @@ function onRowMouseleave() {
   sparkTooltip.classList.remove('visible');
 }
 
-// ── Delegate row hover via event delegation on tbody
+// Delegate row hover via event delegation on tbody
 document.getElementById('tableBody').addEventListener('mouseover', e => {
   const row = e.target.closest('tr[data-id]');
   if (!row || row.dataset.sparkBound) return;
@@ -1291,7 +1286,7 @@ document.getElementById('tableBody').addEventListener('mouseover', e => {
   row.addEventListener('mouseleave', onRowMouseleave);
 });
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// INIT
 document.getElementById('ringProgress').style.strokeDasharray  = CIRC;
 document.getElementById('ringProgress').style.strokeDashoffset = 0;
 fetchData().then(startTimer);
