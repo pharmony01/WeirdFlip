@@ -441,13 +441,13 @@
           <th data-col="buyPrice"
               data-tip="Price you'll place your buy order at — nudged 0.1 above the current top bidder so your order is first in queue.">Buy Order</th>
           <th data-col="sellPrice"
-              data-tip="Price you'll list your sell order at — nudged 0.1 below the current lowest ask so your listing sells first.">Sell Order</th>
+              data-tip="Price you'll list your sell order at — nudged 0.1 below the current lowest ask so your order is first in queue.">Sell Order</th>
           <th data-col="netMargin"
-              data-tip="Profit per item after the 1.25% Bazaar tax. This flat coin amount matters — you're limited to 71k items per order.">Margin / Item</th>
+              data-tip="Profit per item after the 1.25% Bazaar tax.">Margin / Item</th>
           <th data-col="marginPct"
-              data-tip="Return on investment as a percentage. Low % on a high-capital flip may not be worth locking up your coins.">Margin %</th>
+              data-tip="Return on investment as a percentage. Low % on a high-capital flip may not be worth locking up coins.">Margin %</th>
           <th data-col="totalProfit"
-              data-tip="Estimated total profit if the full order fills — capped at 71k items or your capital, whichever is lower.">Est. Profit</th>
+              data-tip="Estimated total profit if the full order fills. Capped at 71,680 items or your capital, whichever is lower.">Est. Profit</th>
           <th data-col="capitalNeeded"
               data-tip="Coins locked up in the buy order. Always at or below your capital filter.">Capital Used</th>
           <th data-col="dailyVolume"
@@ -457,9 +457,9 @@
           <th data-col="compLevel"
               data-tip="Total active buy orders in the order book. More orders = more people potentially jumping your queue. Low ≤15, Medium ≤40, High 41+.">Competition</th>
           <th data-col="score" class="sort-active sort-desc"
-              data-tip="Composite score weighting margin %, flat margin, volume, and fill time equally. Use as a starting point — not a final answer.">Score</th>
+              data-tip="Composite score weighting margin %, flat margin, volume, and fill time equally. Rough guestimate.">Score</th>
           <th class="no-sort"
-              data-tip="Dead market warning: spread is very wide but weekly volume is very low. Could be a manipulation trap, or an item that simply never fills.">⚠</th>
+              data-tip="Dead market warning: spread is very wide but weekly volume is very low.">⚠</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -475,8 +475,8 @@
 const API_DIRECT  = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const CORS_PROXY  = 'https://corsproxy.io/?url=';
 const TAX         = 0.0125;
-const MAX_QTY     = 71000;
-const REFRESH_SEC = 60;
+const MAX_QTY     = 71680;
+const REFRESH_SEC = 50;
 const CIRC        = 2 * Math.PI * 16;
 const DEFAULTS    = { capital: '50m', margin: '50', pct: '1', vol: '5k' };
 
@@ -492,7 +492,6 @@ let isFirstLoad    = true;
 let hideDeadMarket = false;
 
 // ─── PARSE SHORTHAND NUMBERS ───────────────────────────
-// "1.5k" → 1500 | "1.89m" → 1890000 | "2b" → 2000000000 | "50" → 50
 function parseVal(raw) {
   if (raw == null) return 0;
   const s = String(raw).trim().toLowerCase().replace(/,/g, '');
@@ -571,7 +570,20 @@ function computeItem(id, product, capital) {
 
   const totalProfit   = netMargin * maxQty;
   const capitalNeeded = buyPrice  * maxQty;
-  const fillHrs       = dailyVolume > 0 ? maxQty / (dailyVolume / 24) : 99999;
+  const marketShare = 1 / (totalBuyOrders + 1);
+  const effectiveVolume = dailyVolume * marketShare;
+  
+  const competitionFactor =
+  totalBuyOrders <= 5  ? 0.9 :
+  totalBuyOrders <= 15 ? 0.7 :
+  totalBuyOrders <= 40 ? 0.4 :
+                         0.2;
+
+  const effectiveVolume = dailyVolume * competitionFactor;
+  
+  fillHrs = effectiveVolume > 0
+    ? maxQty / (effectiveVolume / 24)
+    : 99999;
 
   // Competition = total buy orders in the book
   // quick_status.sellOrders = orders on sell_summary (bid) side
@@ -584,7 +596,13 @@ function computeItem(id, product, capital) {
                        : 2;
 
   // Dead market flag: wide spread + very low volume
-  const isManipulated = marginPct > 10 && Math.max(sellMW, buyMW) < 10000;
+  const spread = sellPrice - buyPrice;
+  const relSpread = spread / buyPrice;
+  
+  const isManipulated =
+    relSpread > 0.08 &&
+    dailyVolume < 2000 &&
+    totalBuyOrders < 5;
 
   return {
     id, name: fmt.name(id),
@@ -601,9 +619,13 @@ function computeItem(id, product, capital) {
 function computeScores(items) {
   if (items.length < 2) { items.forEach(i => i.score = 50); return; }
   function norm(v, arr) {
-    const lo = Math.min(...arr), hi = Math.max(...arr);
-    return hi === lo ? 0.5 : (v - lo) / (hi - lo);
-  }
+    const sorted = [...arr].sort((a,b)=>a-b);
+    const p95 = sorted[Math.floor(sorted.length * 0.95)];
+    const p5  = sorted[Math.floor(sorted.length * 0.05)];
+    const lo = p5;
+    const hi = p95;
+    return hi === lo ? 0.5 : Math.max(0, Math.min(1, (v - lo) / (hi - lo)));
+}
   const mpArr  = items.map(i => i.marginPct);
   const nmArr  = items.map(i => i.netMargin);
   const volArr = items.map(i => i.dailyVolume);
