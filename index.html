@@ -339,32 +339,10 @@
     .search-card.has-value .search-clear { display: block; }
     .search-card.has-value .filter-input { padding-right: 32px; }
 
-    .score-wrap { display: flex; align-items: center; gap: 9px; }
-    .score-track {
-      width: 56px; height: 4px; background: var(--border);
-      border-radius: 2px; overflow: hidden; flex-shrink: 0;
-    }
-    .score-fill {
-      height: 100%; border-radius: 2px;
-      background: linear-gradient(90deg, var(--blue) 0%, var(--accent) 100%);
-      width: 0; transition: width 0.7s cubic-bezier(0.16,1,0.3,1);
-    }
-    .score-num {
-      font-family: var(--font-mono); font-size: 0.72rem;
-      color: var(--text-dim); min-width: 26px;
-    }
-
-    /* Fill (Ideal) vs Fill (Real) — show the gap visually */
-    .fill-pair {
-      display: flex; flex-direction: column; gap: 2px;
-    }
-    .fill-ideal {
-      font-family: var(--font-mono); font-size: 0.72rem;
-      color: var(--text-muted);
-    }
-    .fill-real {
-      font-family: var(--font-mono); font-size: 0.8rem;
-    }
+    /* Vol. cell stacked display */
+    .vol-cell { display: flex; flex-direction: column; gap: 2px; }
+    .vol-line  { font-family: var(--font-mono); font-size: 0.78rem; }
+    .vol-line-sub { font-family: var(--font-mono); font-size: 0.72rem; opacity: 0.8; }
 
     /* Column header tooltip (JS-positioned, 500ms delay) */
     #col-tooltip {
@@ -458,7 +436,7 @@
     </div>
     <div class="filter-card">
       <label class="filter-label" for="f-margin">📊 Min Margin / Item</label>
-      <input class="filter-input" id="f-margin" type="text" value="50" placeholder="50">
+      <input class="filter-input" id="f-margin" type="text" value="1000" placeholder="1000">
     </div>
     <div class="filter-card">
       <label class="filter-label" for="f-pct">📈 Min Margin %</label>
@@ -480,7 +458,7 @@
 
   <div class="status-bar">
     <div class="status-count">
-      Showing <strong id="resultCount">—</strong> flips &nbsp;·&nbsp; Sorted by <span id="sortLabel">Score</span>
+      Showing <strong id="resultCount">—</strong> flips &nbsp;·&nbsp; Sorted by <span id="sortLabel">Coins/hr</span>
     </div>
     <div class="last-updated" id="lastUpdated">Fetching data…</div>
   </div>
@@ -501,20 +479,18 @@
               data-tip="Return on investment as a percentage. Low % on a high-capital flip may not be worth locking up your coins.">Margin %</th>
           <th data-col="totalProfit"
               data-tip="Estimated total profit if the full order fills — capped at 71k items or your capital, whichever is lower.">Est. Profit</th>
-          <th data-col="coinsPerHour"
-              data-tip="Estimated coins earned per hour based on realistic fill time (competition-adjusted). More useful than total profit alone — a smaller flip that fills in 1h beats a huge flip that takes 3 days.">Coins/hr</th>
+          <th data-col="coinsPerHour" class="sort-active sort-desc"
+              data-tip="Estimated coins earned per hour based on realistic fill time (competition-adjusted). Capital-independent — the same flip earns the same coins/hr at 50M or 500M. More useful than total profit alone.">Coins/hr</th>
           <th data-col="capitalNeeded"
               data-tip="Coins locked up in the buy order. Always at or below your capital filter.">Capital Used</th>
           <th data-col="dailyVolume"
-              data-tip="Conservative daily volume — the lower of the two sides (buy orders vs. sell orders). Using the minimum gives a more honest picture than the average. A ↕ flag means one side is 3× bigger than the other, which can cause problems (see flag tooltip).">Daily Vol.</th>
+              data-tip="↓ Sell orders/day — how fast your buy order fills. ↑ Buy orders/day — how fast your sell order fills afterward. The lower side is your bottleneck and is used for filtering. Values shown separately so you can spot imbalances at a glance — amber means that side is 3× thinner than the other.">Daily Vol.</th>
           <th data-col="fillHrs"
               data-tip="Ideal fill time — how long your full buy order takes to fill assuming you are the only buyer. Reality will be slower.">Fill (Ideal)</th>
           <th data-col="fillHrsRealistic"
               data-tip="Realistic fill time after applying a competition penalty: Low = 1.5×, Medium = 3×, High = 6×. These multipliers are approximate — treat them as order-of-magnitude estimates, not precise predictions.">Fill (Real)</th>
           <th data-col="compLevel"
               data-tip="Total active buy orders in the order book. More orders = more people potentially jumping your queue. Low ≤15, Medium ≤40, High 41+.">Competition</th>
-          <th data-col="score" class="sort-active sort-desc"
-              data-tip="Composite score (0–100) using percentile-clamped normalization across 4 factors: margin % (30%), flat margin (25%), daily volume (25%), realistic fill time (20%). Outliers are clamped to the 5th–95th percentile range so one extreme item can't distort everyone else's score.">Score</th>
           <th class="no-sort"
               data-tip="Dead market warning: spread >8%, very low weekly volume, and very few orders. Likely a planted spread or dormant item — almost certainly won't fill at these prices.">⚠</th>
         </tr>
@@ -533,10 +509,10 @@
 const API_DIRECT  = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const CORS_PROXY  = 'https://corsproxy.io/?url=';
 const TAX         = 0.0125;
-const MAX_QTY     = 71000;
+const MAX_QTY     = 71680;
 const REFRESH_SEC = 60;
 const CIRC        = 2 * Math.PI * 16;
-const DEFAULTS    = { capital: '50m', margin: '50', pct: '1', vol: '5k' };
+const DEFAULTS    = { capital: '50m', margin: '1000', pct: '1', vol: '5k' };
 
 // Competition fill-time multipliers (Low / Medium / High).
 // These are rough order-of-magnitude estimates, not exact science.
@@ -555,7 +531,7 @@ let rawProducts    = null;   // raw API response — invalidated only on new fet
 let cachedItems    = [];     // computeItem results at lastCapital — reused across filter changes
 let lastCapital    = -1;     // sentinel; -1 forces first compute
 let allItems       = [];     // filtered subset of cachedItems after margin/pct/vol/dead pass
-let sortCol        = 'score';
+let sortCol        = 'coinsPerHour';
 let sortDir        = 'desc';
 let timerCount     = REFRESH_SEC;
 let timerInterval  = null;
@@ -571,7 +547,7 @@ const COL_LABELS = {
   netMargin: 'Margin/Item', marginPct: 'Margin %', totalProfit: 'Est. Profit',
   coinsPerHour: 'Coins/hr', capitalNeeded: 'Capital Used',
   dailyVolume: 'Daily Vol.', fillHrs: 'Fill (Ideal)',
-  fillHrsRealistic: 'Fill (Real)', compLevel: 'Competition', score: 'Score',
+  fillHrsRealistic: 'Fill (Real)', compLevel: 'Competition',
 };
 
 // ─── PARSE SHORTHAND NUMBERS ─────────────────────────────────────────────────
@@ -654,31 +630,15 @@ function computeItem(id, product, capital) {
 
   // Conservative daily volume: use the lower side.
   // If one side is much smaller the flip will stall at that stage.
-  const minWeekly  = Math.min(sellMW, buyMW);
-  const maxWeekly  = Math.max(sellMW, buyMW);
+  const minWeekly   = Math.min(sellMW, buyMW);
+  const maxWeekly   = Math.max(sellMW, buyMW);
   const dailyVolume = minWeekly / 7;
+  const sellDailyVol = sellMW / 7;
+  const buyDailyVol  = buyMW  / 7;
 
-  // Volume imbalance: flag if either side is >VOL_IMBAL_RATIO× the other.
-  // When both are 0 there's no imbalance signal (just no volume at all).
-  let volImbalance = false;
-  let volImbalanceTip = '';
-  if (minWeekly > 0 && maxWeekly / minWeekly > VOL_IMBAL_RATIO) {
-    volImbalance = true;
-    // Identify which side is thin and what that means for the flipper
-    if (sellMW < buyMW) {
-      volImbalanceTip = `Sell orders are thin (${fmt.coins(sellMW / 7)}/d vs ${fmt.coins(buyMW / 7)}/d buys). ` +
-        `Your buy order may fill much slower than expected — few people are selling into the market.`;
-    } else {
-      volImbalanceTip = `Buy orders are thin (${fmt.coins(buyMW / 7)}/d vs ${fmt.coins(sellMW / 7)}/d sells). ` +
-        `After your order fills, selling may be slow — few people are buying from the market.`;
-    }
-  } else if (minWeekly === 0 && maxWeekly > 0) {
-    // One side is completely dead
-    volImbalance = true;
-    volImbalanceTip = sellMW === 0
-      ? `Zero sell volume — nobody is selling into this market. Your buy order will never fill.`
-      : `Zero buy volume — nobody is buying from this market. You won't be able to sell after your order fills.`;
-  }
+  // Volume imbalance: one side is >VOL_IMBAL_RATIO× the other, or one side is zero.
+  const volImbalance = (minWeekly > 0 && maxWeekly / minWeekly > VOL_IMBAL_RATIO)
+    || (minWeekly === 0 && maxWeekly > 0);
 
   const maxQty       = Math.min(MAX_QTY, Math.floor(capital / buyPrice));
   if (maxQty <= 0) return null;
@@ -717,11 +677,10 @@ function computeItem(id, product, capital) {
     buyPrice, sellPrice, netMargin, marginPct,
     totalProfit, capitalNeeded,
     sellMovingWeek: sellMW, buyMovingWeek: buyMW,
-    dailyVolume, volImbalance, volImbalanceTip,
+    dailyVolume, sellDailyVol, buyDailyVol, volImbalance,
     fillHrs, fillHrsRealistic, coinsPerHour,
     competition, compLevel, totalBuyOrders,
     isManipulated,
-    score: 0, // filled in by computeScores()
   };
 }
 
@@ -737,78 +696,7 @@ function computeAllItems(capital) {
   }
 }
 
-// ─── COMPOSITE SCORE ─────────────────────────────────────────────────────────
-//
-// Weights:
-//   55% — Coins/hr       log-scaled  100k–30M floor/ceiling
-//   25% — Daily volume   percentile-clamped (relative liquidity confidence)
-//   15% — Margin %       log-scaled  0.5%–50% floor/ceiling
-//    5% — Ideal fill time absolute curve (small nudge vs. genuinely illiquid markets)
-//
-// Why log-scaling for coins/hr and margin %:
-//   Raw normalization lets a 6000% margin or a 45M/hr item completely dominate.
-//   Log compression means 6000% and 100% are treated similarly (both "great"),
-//   and the real differentiation happens in the meaningful 0.5%–50% range.
-//
-// Why absolute curve for fill time instead of relative:
-//   Fill time is capital-dependent — same item, same coins/hr, just different
-//   order sizes. Comparing fill times relative to each other would penalise
-//   high-capital users for no reason. The absolute curve only flags genuinely
-//   illiquid markets (multi-week fills = something is wrong).
-//
-// Why percentile-clamped for volume:
-//   Volume is a relative confidence signal — "is this more or less liquid than
-//   the other options I'm looking at?" Relative normalization is appropriate.
-function computeScores(items) {
-  if (!items.length) return;
-  if (items.length === 1) { items[0].score = 50; return; }
-
-  // Log-scale normalizer: clamps v to [lo, hi] then normalises in log10 space.
-  function logNorm(v, lo, hi) {
-    const clamped = Math.max(lo, Math.min(hi, v));
-    return (Math.log10(clamped) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
-  }
-
-  // Percentile-clamped normalizer: 5th–95th percentile range.
-  function clampedNorm(arr) {
-    const s  = [...arr].sort((a, b) => a - b);
-    const n  = s.length;
-    const lo = s[Math.max(0, Math.floor(n * 0.05))];
-    const hi = s[Math.min(n - 1, Math.floor(n * 0.95))];
-    if (hi === lo) return arr.map(() => 0.5);
-    return arr.map(v => (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
-  }
-
-  // Absolute fill-time penalty curve (ideal hours, not realistic).
-  // Capital-dependent by nature — only penalises markets that are fundamentally
-  // illiquid regardless of order size.
-  function fillCurve(hrs) {
-    if (hrs <= 24)  return 1.00;
-    if (hrs <= 72)  return 0.70;
-    if (hrs <= 168) return 0.40;
-    if (hrs <= 720) return 0.15;
-    return 0.05;
-  }
-
-  const volN = clampedNorm(items.map(i => i.dailyVolume));
-
-  items.forEach((it, idx) => {
-    const chScore  = logNorm(it.coinsPerHour, 100_000,  30_000_000); // 100k–30M
-    const mpScore  = logNorm(it.marginPct,    0.5,       50);         // 0.5%–50%
-    const volScore = volN[idx];
-    const fhScore  = fillCurve(it.fillHrs);
-
-    it.score = (
-      chScore  * 0.55 +
-      volScore * 0.25 +
-      mpScore  * 0.15 +
-      fhScore  * 0.05
-    ) * 100;
-  });
-}
-
-// ─── APPLY FILTERS + SCORE + RENDER ─────────────────────────────────────────
-// Recomputes items only when capital changes; otherwise just re-filters cachedItems.
+// ─── APPLY FILTERS + RENDER ──────────────────────────────────────────────────
 function applyFilters(fromFetch = false) {
   if (!rawProducts) return;
   const filters = getFilters();
@@ -828,10 +716,6 @@ function applyFilters(fromFetch = false) {
     items = items.filter(i => !i.isManipulated);
   }
   allItems = items;
-
-  // Score normalization runs on the visible set so outlier items you've
-  // filtered out don't compress the scores of everything you're looking at.
-  computeScores(allItems);
 
   setStatus('live');
   const shouldAnimate = fromFetch && isFirstLoad;
@@ -881,7 +765,7 @@ function renderTable(animate) {
          <p>Try a different search term or clear the search bar.</p>`
       : `<p>No flips match your current filters.</p>
          <p>Try lowering the margin %, volume, or flat margin requirements.</p>`;
-    tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="14">
+    tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="13">
       <div class="empty-state">
         <div class="empty-icon">🪙</div>
         ${msg}
@@ -897,17 +781,17 @@ function renderTable(animate) {
                   : item.coinsPerHour >= 1e6   ? 'td-amber'
                   : 'td-dim';
     const bClass  = ['badge-low', 'badge-medium', 'badge-high'][item.compLevel];
-    const score   = Math.round(item.score);
     const delay   = animate ? i * 35 : 0;
+
+    // Volume: amber on the thinner side when imbalanced
+    const sellThin = item.volImbalance && item.sellDailyVol < item.buyDailyVol;
+    const buyThin  = item.volImbalance && item.buyDailyVol  < item.sellDailyVol;
+    const sVolC    = sellThin ? 'td-amber' : 'td-dim';
+    const bVolC    = buyThin  ? 'td-amber' : 'td-dim';
 
     // Dead market flag
     const deadFlag = item.isManipulated
       ? `<span class="flag-icon flag-dead" data-tip="Spread >8% but only ${fmt.coins(Math.max(item.sellMovingWeek, item.buyMovingWeek))} items moved last week with <${DEAD_MAX_ORDERS} orders — likely a planted spread or completely dead market.">⚠</span>`
-      : '';
-
-    // Volume imbalance flag — shown inline in the Daily Vol cell
-    const imbalFlag = item.volImbalance
-      ? `<span class="flag-icon flag-imbal" data-tip="${item.volImbalanceTip}">↕</span>`
       : '';
 
     return `<tr data-id="${item.id}" style="transition-delay:${delay}ms">
@@ -919,8 +803,11 @@ function renderTable(animate) {
       <td class="td-mono ${pColor}">${fmt.coins(item.totalProfit)}</td>
       <td class="td-mono ${chColor}">${item.coinsPerHour > 0 ? fmt.coins(item.coinsPerHour) + '/h' : '—'}</td>
       <td class="td-mono td-dim">${fmt.coins(item.capitalNeeded)}</td>
-      <td class="td-mono td-dim" style="display:flex;align-items:center;gap:4px">
-        ${fmt.coins(item.dailyVolume)}/d${imbalFlag}
+      <td>
+        <div class="vol-cell">
+          <span class="vol-line ${sVolC}">↓ ${fmt.coins(item.sellDailyVol)}/d</span>
+          <span class="vol-line-sub ${bVolC}">↑ ${fmt.coins(item.buyDailyVol)}/d</span>
+        </div>
       </td>
       <td class="td-mono td-dim">${fmt.hrs(item.fillHrs)}</td>
       <td class="td-mono ${fColor}">${fmt.hrs(item.fillHrsRealistic)}</td>
@@ -930,14 +817,6 @@ function renderTable(animate) {
           <span style="opacity:0.5;font-size:0.55rem;margin-left:2px">(${item.totalBuyOrders})</span>
         </span>
       </td>
-      <td>
-        <div class="score-wrap">
-          <div class="score-track">
-            <div class="score-fill" style="width:0%" data-target="${score}"></div>
-          </div>
-          <span class="score-num">${score}</span>
-        </div>
-      </td>
       <td>${deadFlag}</td>
     </tr>`;
   });
@@ -946,19 +825,15 @@ function renderTable(animate) {
 
   requestAnimationFrame(() => {
     tbody.querySelectorAll('tr').forEach((row, i) => {
-      setTimeout(() => {
-        row.classList.add('visible');
-        const fill = row.querySelector('.score-fill');
-        if (fill) fill.style.width = fill.dataset.target + '%';
-      }, animate ? i * 35 : 0);
+      setTimeout(() => row.classList.add('visible'), animate ? i * 35 : 0);
     });
   });
 }
 
 // ─── SKELETON ────────────────────────────────────────────────────────────────
 function showSkeletons() {
-  // 14 columns
-  const widths = [140, 70, 70, 65, 55, 85, 80, 85, 90, 55, 55, 90, 50, 10];
+  // 13 columns (score removed)
+  const widths = [140, 70, 70, 65, 55, 85, 80, 85, 90, 55, 55, 90, 10];
   document.getElementById('tableBody').innerHTML =
     Array(10).fill(0).map(() =>
       `<tr style="opacity:1;transform:none">${
