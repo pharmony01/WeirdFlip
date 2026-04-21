@@ -224,7 +224,7 @@
     /* ── TABLE ── */
     .table-wrapper {
       border: 1px solid var(--border); border-radius: 14px;
-      overflow: hidden; overflow-x: auto;
+      overflow-x: auto;
     }
     table { width: 100%; border-collapse: collapse; min-width: 1500px; }
     thead { background: var(--surface); }
@@ -289,27 +289,12 @@
     .badge-high   .badge-dot { background: var(--red); }
 
     /* ── FLAGS (dead market + volume imbalance) ── */
-    /* Tooltips always open downward */
     .flag-icon {
       display: inline-flex; align-items: center; justify-content: center;
       width: 24px; height: 24px; border-radius: 6px;
       font-size: 12px; cursor: help; position: relative;
       flex-shrink: 0;
     }
-    .flag-icon::after {
-      content: attr(data-tip);
-      position: absolute;
-      top: calc(100% + 8px);
-      right: 0;
-      background: var(--card); border: 1px solid var(--border);
-      color: var(--text); font-family: var(--font-body); font-size: 0.72rem;
-      line-height: 1.5; padding: 8px 12px; border-radius: 8px;
-      width: 260px; white-space: normal;
-      opacity: 0; pointer-events: none;
-      transition: opacity 0.2s; z-index: 100;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
-    }
-    .flag-icon:hover::after { opacity: 1; }
     .flag-dead {
       background: var(--amber-dim); border: 1px solid rgba(251,191,36,0.2);
       color: var(--amber);
@@ -318,6 +303,41 @@
       background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2);
       color: var(--blue); margin-left: 5px;
     }
+
+    /* Flag tooltip — JS-positioned fixed div, bypasses overflow clipping */
+    #flag-tooltip {
+      position: fixed;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-body); font-size: 0.75rem;
+      line-height: 1.55; padding: 9px 13px; border-radius: 8px;
+      max-width: 280px; pointer-events: none; white-space: normal;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.75);
+      z-index: 500; opacity: 0; transition: opacity 0.15s;
+    }
+    #flag-tooltip.visible { opacity: 1; }
+
+    /* ── SEARCH ROW ── */
+    .search-row {
+      margin-bottom: 10px;
+    }
+    .search-card {
+      display: flex; align-items: center; gap: 10px;
+      position: relative;
+    }
+    .search-icon {
+      font-size: 0.85rem; color: var(--text-muted); flex-shrink: 0;
+      pointer-events: none;
+    }
+    .search-clear {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+      transition: color 0.15s, background 0.15s;
+      display: none;
+    }
+    .search-clear:hover { color: var(--text); background: var(--border); }
+    .search-card.has-value .search-clear { display: block; }
+    .search-card.has-value .filter-input { padding-right: 32px; }
 
     .score-wrap { display: flex; align-items: center; gap: 9px; }
     .score-track {
@@ -421,6 +441,16 @@
 
   <div class="error-banner" id="errorBanner"></div>
 
+  <div class="search-row">
+    <div class="filter-card search-card" id="searchCard">
+      <span class="search-icon">🔍</span>
+      <input class="filter-input" id="f-search" type="text"
+             placeholder="Search items… (e.g. enchanted cobblestone)"
+             autocomplete="off" spellcheck="false">
+      <span class="search-clear" id="searchClear" title="Clear search">✕</span>
+    </div>
+  </div>
+
   <div class="filter-row">
     <div class="filter-card">
       <label class="filter-label" for="f-capital">💰 Capital</label>
@@ -496,6 +526,7 @@
 </div>
 
 <div id="col-tooltip"></div>
+<div id="flag-tooltip"></div>
 
 <script>
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
@@ -532,6 +563,7 @@ let useCorsProxy   = false;
 let isFirstLoad    = true;
 let isFetching     = false;
 let hideDeadMarket = false;
+let searchQuery    = '';
 
 // ─── COLUMN LABELS (shared between status bar and renderTable) ───────────────
 const COL_LABELS = {
@@ -729,10 +761,10 @@ function computeScores(items) {
 
   items.forEach((it, i) => {
     it.score = (
-      mpN[i]  * 0.30 +
-      nmN[i]  * 0.25 +
-      volN[i] * 0.25 +
-      (1 - fhN[i]) * 0.20   // inverted: lower fill time = better
+      mpN[i]  * 0.25 +
+      nmN[i]  * 0.20 +
+      volN[i] * 0.20 +
+      (1 - fhN[i]) * 0.35   // inverted: lower fill time = better (dominant factor)
     ) * 100;
   });
 }
@@ -774,8 +806,7 @@ function applyFilters(fromFetch = false) {
       `Updated ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
   }
 
-  document.getElementById('resultCount').textContent  = allItems.length;
-  document.getElementById('sortLabel').textContent     = COL_LABELS[sortCol] || sortCol;
+  document.getElementById('sortLabel').textContent = COL_LABELS[sortCol] || sortCol;
 }
 
 // ─── SORT ────────────────────────────────────────────────────────────────────
@@ -791,15 +822,31 @@ function sorted() {
 
 // ─── RENDER TABLE ────────────────────────────────────────────────────────────
 function renderTable(animate) {
-  const items = sorted();
+  let items = sorted();
+
+  // Apply search filter (display-only — doesn't affect score normalization)
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    items = items.filter(i =>
+      i.name.toLowerCase().includes(q) || i.id.toLowerCase().includes(q)
+    );
+  }
+
+  // Always update result count here (search may narrow below allItems.length)
+  document.getElementById('resultCount').textContent = items.length;
+
   const tbody = document.getElementById('tableBody');
 
   if (!items.length) {
+    const msg = searchQuery
+      ? `<p>No items match "<strong style="color:var(--text)">${searchQuery}</strong>".</p>
+         <p>Try a different search term or clear the search bar.</p>`
+      : `<p>No flips match your current filters.</p>
+         <p>Try lowering the margin %, volume, or flat margin requirements.</p>`;
     tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="14">
       <div class="empty-state">
         <div class="empty-icon">🪙</div>
-        <p>No flips match your current filters.</p>
-        <p>Try lowering the margin %, volume, or flat margin requirements.</p>
+        ${msg}
       </div></td></tr>`;
     return;
   }
@@ -998,6 +1045,10 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('f-vol').value     = DEFAULTS.vol;
   ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
     document.getElementById(id).classList.remove('invalid'));
+  // Also clear search
+  document.getElementById('f-search').value = '';
+  searchQuery = '';
+  document.getElementById('searchCard').classList.remove('has-value');
   clearTimeout(filterDebounce);
   applyFilters(false);
 });
@@ -1037,6 +1088,58 @@ document.querySelectorAll('th[data-tip]').forEach(th => {
     clearTimeout(tipTimer);
     colTooltip.classList.remove('visible');
   });
+});
+
+// ─── SEARCH ──────────────────────────────────────────────────────────────────
+let searchDebounce;
+document.getElementById('f-search').addEventListener('input', e => {
+  searchQuery = e.target.value.trim();
+  document.getElementById('searchCard').classList.toggle('has-value', searchQuery.length > 0);
+  clearTimeout(searchDebounce);
+  // Shorter debounce for search — no recompute, just re-render
+  searchDebounce = setTimeout(() => renderTable(false), 120);
+});
+
+document.getElementById('searchClear').addEventListener('click', () => {
+  document.getElementById('f-search').value = '';
+  searchQuery = '';
+  document.getElementById('searchCard').classList.remove('has-value');
+  renderTable(false);
+  document.getElementById('f-search').focus();
+});
+
+// ─── FLAG TOOLTIPS (event delegation on tbody) ────────────────────────────────
+// Using a JS-positioned fixed div so table overflow clipping is irrelevant.
+const flagTooltip = document.getElementById('flag-tooltip');
+let flagTipTimer  = null;
+
+document.getElementById('tableBody').addEventListener('mouseover', e => {
+  const flag = e.target.closest('.flag-icon');
+  if (!flag) return;
+  clearTimeout(flagTipTimer);
+  const tip = flag.getAttribute('data-tip');
+  if (!tip) return;
+  flagTipTimer = setTimeout(() => {
+    flagTooltip.textContent = tip;
+    flagTooltip.classList.add('visible');
+    const r    = flag.getBoundingClientRect();
+    const tw   = 280;
+    let left   = r.right - tw;
+    if (left < 8) left = 8;
+    if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+    let top    = r.bottom + 6;
+    // Flip upward if tooltip would go off-screen bottom
+    if (top + 120 > window.innerHeight) top = r.top - 120;
+    flagTooltip.style.left = left + 'px';
+    flagTooltip.style.top  = top  + 'px';
+  }, 200);
+});
+
+document.getElementById('tableBody').addEventListener('mouseout', e => {
+  const flag = e.target.closest('.flag-icon');
+  if (!flag) return;
+  clearTimeout(flagTipTimer);
+  flagTooltip.classList.remove('visible');
 });
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
