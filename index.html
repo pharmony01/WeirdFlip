@@ -1138,8 +1138,8 @@ function normaliseSparkData(raw) {
   const sample = raw[0];
   // Support multiple field-name conventions seen in the wild
   const getT    = o => o.timestamp ?? o.time ?? o.Timestamp ?? 0;
-  const getBuy  = o => o.buy  ?? o.buyPrice  ?? o.BuyPrice  ?? 0;
-  const getSell = o => o.sell ?? o.sellPrice ?? o.SellPrice ?? 0;
+  const getBuy  = o => o.sell ?? o.sellPrice ?? o.SellPrice ?? 0;  // CoflNet "sell" = buy order (bid, lower)
+  const getSell = o => o.buy  ?? o.buyPrice  ?? o.BuyPrice  ?? 0;  // CoflNet "buy"  = sell order (ask, higher)
   const pts = raw
     .map(o => ({ t: new Date(getT(o)).getTime(), buy: +getBuy(o), sell: +getSell(o) }))
     .filter(p => isFinite(p.t) && p.buy > 0 && p.sell > 0)
