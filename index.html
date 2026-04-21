@@ -482,6 +482,7 @@ const DEFAULTS    = { capital: '50m', margin: '50', pct: '1', vol: '5k' };
 
 // ─── STATE ─────────────────────────────────────────────
 let allItems       = [];
+let rawProducts    = null; // cached API data
 let sortCol        = 'score';
 let sortDir        = 'desc';
 let timerCount     = REFRESH_SEC;
@@ -645,11 +646,18 @@ async function fetchData() {
     return;
   }
 
+  rawProducts = data.products;
+  applyFilters(true);
+}
+
+// ─── APPLY FILTERS (no fetch) ──────────────────────────
+function applyFilters(fromFetch = false) {
+  if (!rawProducts) return;
   const filters = getFilters();
   const computed = [];
   let _s = 0, _m = 0, _p = 0, _v = 0, _total = 0;
 
-  for (const [id, product] of Object.entries(data.products)) {
+  for (const [id, product] of Object.entries(rawProducts)) {
     _total++;
     const item = computeItem(id, product, filters.capital);
     if (!item) continue; _s++;
@@ -659,17 +667,18 @@ async function fetchData() {
     computed.push(item);
   }
 
-  console.log(`[WeirdFlip] ${_total} items → spread: ${_s} → margin≥${filters.minMargin}: ${_m} → pct≥${filters.minPct}%: ${_p} → vol≥${filters.minVol}/d: ${_v} → shown: ${computed.length}`);
+  console.log(`[WeirdFlip] ${_total} → spread: ${_s} → margin: ${_m} → pct: ${_p} → vol: ${_v} → shown: ${computed.length}`);
 
   computeScores(computed);
   allItems = computed;
   setStatus('live');
-  renderTable(isFirstLoad);
-  isFirstLoad = false;
-
-  const t = new Date();
-  document.getElementById('lastUpdated').textContent =
-    `Updated ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  renderTable(fromFetch && isFirstLoad);
+  if (fromFetch) {
+    isFirstLoad = false;
+    const t = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Updated ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  }
 }
 
 // ─── SORT + FILTER ─────────────────────────────────────
@@ -823,11 +832,9 @@ function onFilterChange() {
     const v  = parseVal(el.value);
     el.classList.toggle('invalid', isNaN(v) || v < 0);
   });
+  // Re-process cached data only — no API call
   clearTimeout(filterDebounce);
-  filterDebounce = setTimeout(() => {
-    isFirstLoad = false;
-    fetchData().then(startTimer);
-  }, 700);
+  filterDebounce = setTimeout(() => applyFilters(false), 300);
 }
 ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
   document.getElementById(id).addEventListener('input', onFilterChange));
@@ -841,8 +848,7 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
     document.getElementById(id).classList.remove('invalid'));
   clearTimeout(filterDebounce);
-  isFirstLoad = false;
-  fetchData().then(startTimer);
+  applyFilters(false);
 });
 
 // ─── DEAD MARKET TOGGLE ────────────────────────────────
