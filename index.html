@@ -14,7 +14,6 @@
       --border:      #1c2235;
       --border-soft: #141826;
       --accent:      #f0a500;
-      --accent-glow: rgba(240, 165, 0, 0.18);
       --accent-dim:  rgba(240, 165, 0, 0.10);
       --green:       #22d3a0;
       --green-dim:   rgba(34, 211, 160, 0.12);
@@ -23,7 +22,6 @@
       --red:         #f87171;
       --red-dim:     rgba(248, 113, 113, 0.12);
       --blue:        #60a5fa;
-      --blue-dim:    rgba(96, 165, 250, 0.12);
       --text:        #dde3f0;
       --text-muted:  #4a5568;
       --text-dim:    #7a8499;
@@ -33,7 +31,6 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     html { scroll-behavior: smooth; }
 
     body {
@@ -45,200 +42,101 @@
       position: relative;
     }
 
-    /* Grid background */
     body::before {
       content: '';
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background-image:
         linear-gradient(rgba(240,165,0,0.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(240,165,0,0.025) 1px, transparent 1px);
       background-size: 48px 48px;
-      pointer-events: none;
-      z-index: 0;
+      pointer-events: none; z-index: 0;
     }
-
-    /* Top ambient glow */
     body::after {
       content: '';
-      position: fixed;
-      top: -300px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 900px;
-      height: 500px;
+      position: fixed; top: -300px; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 500px;
       background: radial-gradient(ellipse, rgba(240,165,0,0.07) 0%, transparent 65%);
-      pointer-events: none;
-      z-index: 0;
+      pointer-events: none; z-index: 0;
     }
 
     .container {
-      max-width: 1700px;
-      margin: 0 auto;
+      max-width: 1700px; margin: 0 auto;
       padding: 0 28px 60px;
-      position: relative;
-      z-index: 1;
+      position: relative; z-index: 1;
     }
 
-    /* ── HEADER ─────────────────────────────────── */
+    /* ── HEADER ── */
     header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 28px 0 28px;
-      margin-bottom: 28px;
-      border-bottom: 1px solid var(--border);
-      position: relative;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 0; margin-bottom: 24px;
+      border-bottom: 1px solid var(--border); position: relative;
     }
-
     header::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      width: 200px;
-      height: 1px;
+      content: ''; position: absolute; bottom: -1px; left: 0;
+      width: 200px; height: 1px;
       background: linear-gradient(90deg, var(--accent), transparent);
     }
-
     .logo { display: flex; align-items: baseline; gap: 14px; }
-
     .logo h1 {
-      font-family: var(--font-display);
-      font-size: 2.2rem;
-      font-weight: 800;
-      letter-spacing: 0.08em;
-      color: var(--accent);
-      text-shadow: 0 0 60px rgba(240,165,0,0.5), 0 0 20px rgba(240,165,0,0.3);
+      font-family: var(--font-display); font-size: 2.2rem; font-weight: 800;
+      letter-spacing: 0.08em; color: var(--accent);
       animation: logo-glow 3s ease-in-out infinite alternate;
     }
-
     @keyframes logo-glow {
       from { text-shadow: 0 0 40px rgba(240,165,0,0.4), 0 0 12px rgba(240,165,0,0.2); }
       to   { text-shadow: 0 0 80px rgba(240,165,0,0.7), 0 0 30px rgba(240,165,0,0.4); }
     }
-
     .logo-sub {
-      font-family: var(--font-mono);
-      font-size: 0.65rem;
-      letter-spacing: 0.2em;
-      color: var(--text-muted);
-      text-transform: uppercase;
+      font-family: var(--font-mono); font-size: 0.65rem;
+      letter-spacing: 0.2em; color: var(--text-muted); text-transform: uppercase;
     }
-
     .header-right { display: flex; align-items: center; gap: 24px; }
-
     .live-pill {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 14px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-family: var(--font-mono);
-      font-size: 0.7rem;
-      letter-spacing: 0.1em;
-      color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 14px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 20px;
+      font-family: var(--font-mono); font-size: 0.7rem;
+      letter-spacing: 0.1em; color: var(--text-muted);
     }
-
     .live-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 8px var(--green);
-      flex-shrink: 0;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--green); box-shadow: 0 0 8px var(--green); flex-shrink: 0;
     }
     .live-dot.loading { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink 0.8s ease-in-out infinite; }
     .live-dot.error   { background: var(--red);   box-shadow: 0 0 8px var(--red);   animation: none; }
     .live-dot:not(.loading):not(.error) { animation: breathe 2.5s ease-in-out infinite; }
-
     @keyframes breathe { 0%,100%{opacity:1} 50%{opacity:0.35} }
     @keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0.2}  }
 
-    /* Refresh countdown ring */
     .refresh-btn {
-      position: relative;
-      width: 40px; height: 40px;
-      cursor: pointer;
-      flex-shrink: 0;
+      position: relative; width: 40px; height: 40px;
+      cursor: pointer; flex-shrink: 0;
     }
     .refresh-btn svg { transform: rotate(-90deg); }
-    .refresh-btn:hover .ring-icon { color: var(--accent); }
     .ring-bg { fill: none; stroke: var(--border); stroke-width: 2.5; }
     .ring-progress {
-      fill: none;
-      stroke: var(--accent);
-      stroke-width: 2.5;
-      stroke-linecap: round;
-      stroke-dasharray: 101;
-      stroke-dashoffset: 0;
+      fill: none; stroke: var(--accent); stroke-width: 2.5;
+      stroke-linecap: round; stroke-dasharray: 101; stroke-dashoffset: 0;
       transition: stroke-dashoffset 1s linear;
     }
     .ring-icon {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
       font-size: 16px; color: var(--text-dim);
-      transition: color 0.2s, transform 0.3s;
-      user-select: none;
+      transition: color 0.2s, transform 0.3s; user-select: none;
     }
-    .refresh-btn:hover .ring-icon { transform: rotate(30deg); }
+    .refresh-btn:hover .ring-icon { color: var(--accent); transform: rotate(30deg); }
 
-    /* ── STATS STRIP ─────────────────────────────── */
-    .stats-strip {
+    /* ── FILTERS ── */
+    .filter-row {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 22px;
+      grid-template-columns: repeat(4, 1fr) auto auto;
+      gap: 10px; align-items: stretch;
+      margin-bottom: 14px;
     }
-
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 18px 20px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.3s;
-    }
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent), transparent);
-      opacity: 0.5;
-    }
-
-    .stat-label {
-      font-family: var(--font-mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 10px;
-    }
-    .stat-value {
-      font-family: var(--font-mono);
-      font-size: 1.4rem;
-      font-weight: 600;
-      color: var(--accent);
-      letter-spacing: -0.02em;
-    }
-
-    /* ── FILTERS ─────────────────────────────────── */
-    .filters {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 20px;
-    }
-
     .filter-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 18px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .filter-card:focus-within {
@@ -246,92 +144,112 @@
       box-shadow: 0 0 0 3px rgba(240,165,0,0.06);
     }
     .filter-label {
-      display: block;
-      font-family: var(--font-mono);
-      font-size: 0.6rem;
-      letter-spacing: 0.15em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+      display: block; font-family: var(--font-mono); font-size: 0.58rem;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 7px;
     }
     .filter-input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      outline: none;
-      font-family: var(--font-mono);
-      font-size: 1rem;
-      color: var(--text);
-      caret-color: var(--accent);
+      width: 100%; background: transparent; border: none; outline: none;
+      font-family: var(--font-mono); font-size: 0.95rem;
+      color: var(--text); caret-color: var(--accent);
     }
     .filter-input::placeholder { color: var(--text-muted); }
+    .filter-input.invalid { color: var(--red); }
 
-    /* ── STATUS BAR ──────────────────────────────── */
+    .btn-reset {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 0 18px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 10px;
+      font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim);
+      cursor: pointer; transition: border-color 0.2s, color 0.2s, background 0.2s;
+      white-space: nowrap;
+    }
+    .btn-reset:hover {
+      border-color: rgba(240,165,0,0.4); color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .toggle-wrap {
+      display: flex; flex-direction: column; justify-content: center;
+      align-items: flex-start; gap: 7px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 10px; padding: 12px 16px;
+      cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      white-space: nowrap; user-select: none;
+    }
+    .toggle-wrap:hover { border-color: rgba(240,165,0,0.3); }
+    .toggle-wrap.active {
+      border-color: rgba(251,191,36,0.4);
+      background: rgba(251,191,36,0.05);
+    }
+    .toggle-label-text {
+      font-family: var(--font-mono); font-size: 0.58rem;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted);
+    }
+    .toggle-wrap.active .toggle-label-text { color: var(--amber); }
+    .toggle-row { display: flex; align-items: center; gap: 8px; }
+    .toggle-track {
+      width: 36px; height: 18px; border-radius: 9px;
+      background: var(--border); position: relative;
+      transition: background 0.2s; flex-shrink: 0;
+    }
+    .toggle-wrap.active .toggle-track { background: rgba(251,191,36,0.5); }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--text-muted); transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-wrap.active .toggle-thumb { transform: translateX(18px); background: var(--amber); }
+    .toggle-state-text {
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);
+    }
+    .toggle-wrap.active .toggle-state-text { color: var(--amber); }
+
+    /* ── STATUS BAR ── */
     .status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      padding: 0 2px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; padding: 0 2px;
     }
     .status-count {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--text-muted);
+      font-family: var(--font-mono); font-size: 0.73rem; color: var(--text-muted);
     }
     .status-count strong { color: var(--accent); font-weight: 600; }
     .last-updated {
-      font-family: var(--font-mono);
-      font-size: 0.68rem;
-      color: var(--text-muted);
+      font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted);
     }
 
-    /* ── TABLE ───────────────────────────────────── */
+    /* ── TABLE ── */
     .table-wrapper {
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      overflow-x: auto;
+      border: 1px solid var(--border); border-radius: 14px;
+      overflow: hidden; overflow-x: auto;
     }
-
     table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-
     thead { background: var(--surface); }
 
     th {
-      padding: 13px 16px;
-      text-align: left;
-      font-family: var(--font-mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      white-space: nowrap;
-      cursor: pointer;
-      user-select: none;
+      padding: 13px 16px; text-align: left;
+      font-family: var(--font-mono); font-size: 0.62rem;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-muted); white-space: nowrap;
+      cursor: pointer; user-select: none;
       border-bottom: 1px solid var(--border);
       transition: color 0.2s, background 0.2s;
+      position: relative;
     }
     th:hover { color: var(--text); background: rgba(255,255,255,0.02); }
     th.sort-active { color: var(--accent); }
     th.sort-asc::after  { content: ' ↑'; }
     th.sort-desc::after { content: ' ↓'; }
-    th:last-child { cursor: default; }
+    th.no-sort { cursor: default; }
 
     tbody tr {
       border-bottom: 1px solid var(--border-soft);
-      opacity: 0;
-      transform: translateY(10px);
-      transition:
-        opacity 0.4s ease,
-        transform 0.4s ease,
-        background 0.15s;
+      opacity: 0; transform: translateY(10px);
+      transition: opacity 0.4s ease, transform 0.4s ease, background 0.15s;
     }
     tbody tr:last-child { border-bottom: none; }
-    tbody tr.visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    tbody tr.visible { opacity: 1; transform: translateY(0); }
     tbody tr:hover { background: var(--card-hover); }
     tbody tr:hover td.td-name { color: var(--accent); }
 
@@ -341,41 +259,24 @@
     }
     tbody tr.updated { animation: row-updated 1s ease forwards; }
 
-    td {
-      padding: 14px 16px;
-      font-size: 0.85rem;
-      white-space: nowrap;
-    }
-
+    td { padding: 13px 16px; font-size: 0.85rem; white-space: nowrap; }
     .td-name {
-      font-family: var(--font-body);
-      font-weight: 600;
-      color: var(--text);
-      max-width: 220px;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      font-family: var(--font-body); font-weight: 600; color: var(--text);
+      max-width: 220px; overflow: hidden; text-overflow: ellipsis;
       transition: color 0.2s;
     }
     .td-mono { font-family: var(--font-mono); font-size: 0.8rem; }
     .td-green { color: var(--green); }
     .td-amber { color: var(--amber); }
     .td-red   { color: var(--red);   }
-    .td-blue  { color: var(--blue);  }
     .td-dim   { color: var(--text-dim); }
 
-    /* Competition badges */
     .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-family: var(--font-mono);
-      font-size: 0.62rem;
-      letter-spacing: 0.06em;
-      font-weight: 600;
-      text-transform: uppercase;
-      white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-family: var(--font-mono); font-size: 0.62rem;
+      letter-spacing: 0.06em; font-weight: 600;
+      text-transform: uppercase; white-space: nowrap;
     }
     .badge-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
     .badge-low    { background: var(--green-dim); color: var(--green); border: 1px solid rgba(34,211,160,0.2); }
@@ -385,77 +286,61 @@
     .badge-high   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(248,113,113,0.2); }
     .badge-high   .badge-dot { background: var(--red); }
 
-    /* Warning flag */
+    /* Dead market flag — tooltip opens DOWNWARD */
     .warn-flag {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 26px; height: 26px;
-      border-radius: 6px;
-      background: var(--amber-dim);
-      border: 1px solid rgba(251,191,36,0.2);
-      color: var(--amber);
-      font-size: 13px;
-      cursor: help;
-      position: relative;
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--amber-dim); border: 1px solid rgba(251,191,36,0.2);
+      color: var(--amber); font-size: 13px; cursor: help; position: relative;
     }
     .warn-flag::after {
       content: attr(data-tip);
       position: absolute;
-      bottom: calc(100% + 10px);
+      top: calc(100% + 8px);
       right: 0;
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-      font-family: var(--font-body);
-      font-size: 0.72rem;
-      line-height: 1.5;
-      padding: 8px 12px;
-      border-radius: 8px;
-      white-space: nowrap;
-      max-width: 280px;
-      white-space: normal;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.2s;
-      z-index: 50;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--font-body); font-size: 0.72rem;
+      line-height: 1.5; padding: 8px 12px; border-radius: 8px;
+      width: 260px; white-space: normal;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s; z-index: 100;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     }
     .warn-flag:hover::after { opacity: 1; }
 
-    /* Score bar */
     .score-wrap { display: flex; align-items: center; gap: 9px; }
     .score-track {
-      width: 56px; height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-      flex-shrink: 0;
+      width: 56px; height: 4px; background: var(--border);
+      border-radius: 2px; overflow: hidden; flex-shrink: 0;
     }
     .score-fill {
-      height: 100%;
-      border-radius: 2px;
+      height: 100%; border-radius: 2px;
       background: linear-gradient(90deg, var(--blue) 0%, var(--accent) 100%);
-      width: 0;
-      transition: width 0.7s cubic-bezier(0.16,1,0.3,1);
+      width: 0; transition: width 0.7s cubic-bezier(0.16,1,0.3,1);
     }
     .score-num {
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      color: var(--text-dim);
-      min-width: 26px;
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--text-dim); min-width: 26px;
     }
 
-    /* ── SKELETON ─────────────────────────────────── */
+    /* Column header tooltip (JS-positioned, 500ms delay) */
+    #col-tooltip {
+      position: fixed;
+      background: var(--card); border: 1px solid var(--border);
+      color: var(--text-dim); font-family: var(--font-body); font-size: 0.75rem;
+      line-height: 1.55; padding: 9px 13px; border-radius: 8px;
+      max-width: 240px; pointer-events: none;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      z-index: 200; opacity: 0; transition: opacity 0.15s;
+    }
+    #col-tooltip.visible { opacity: 1; }
+
+    /* Skeleton shimmer */
     .skeleton-cell {
-      height: 14px;
-      border-radius: 4px;
+      height: 14px; border-radius: 4px;
       background: linear-gradient(90deg,
-        var(--surface) 0%,
-        var(--card) 40%,
-        var(--card-hover) 50%,
-        var(--card) 60%,
-        var(--surface) 100%);
+        var(--surface) 0%, var(--card) 40%, var(--card-hover) 50%,
+        var(--card) 60%, var(--surface) 100%);
       background-size: 300% 100%;
       animation: shimmer 1.8s ease-in-out infinite;
     }
@@ -464,37 +349,26 @@
       100% { background-position: -100% 0; }
     }
 
-    /* ── EMPTY STATE ─────────────────────────────── */
-    .empty-state {
-      text-align: center;
-      padding: 80px 24px;
-    }
+    .empty-state { text-align: center; padding: 80px 24px; }
     .empty-icon { font-size: 3rem; opacity: 0.3; margin-bottom: 16px; }
     .empty-state p {
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-bottom: 6px;
+      font-family: var(--font-mono); font-size: 0.8rem;
+      color: var(--text-muted); margin-bottom: 6px;
     }
 
-    /* ── ERROR BANNER ────────────────────────────── */
     .error-banner {
-      background: var(--red-dim);
-      border: 1px solid rgba(248,113,113,0.25);
-      border-radius: 10px;
-      padding: 14px 20px;
-      font-family: var(--font-mono);
-      font-size: 0.8rem;
-      color: var(--red);
-      margin-bottom: 20px;
-      display: none;
+      background: var(--red-dim); border: 1px solid rgba(248,113,113,0.25);
+      border-radius: 10px; padding: 14px 20px;
+      font-family: var(--font-mono); font-size: 0.8rem;
+      color: var(--red); margin-bottom: 16px; display: none;
     }
 
-    @media (max-width: 1100px) {
-      .filters, .stats-strip { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 1200px) {
+      .filter-row { grid-template-columns: repeat(2, 1fr) auto auto; }
     }
-    @media (max-width: 600px) {
-      .filters, .stats-strip { grid-template-columns: 1fr; }
+    @media (max-width: 700px) {
+      .filter-row { grid-template-columns: 1fr 1fr; }
+      .btn-reset, .toggle-wrap { grid-column: span 2; }
       .logo h1 { font-size: 1.6rem; }
     }
   </style>
@@ -502,7 +376,6 @@
 <body>
 <div class="container">
 
-  <!-- HEADER -->
   <header>
     <div class="logo">
       <h1>WeirdFlip</h1>
@@ -523,50 +396,35 @@
     </div>
   </header>
 
-  <!-- ERROR BANNER -->
   <div class="error-banner" id="errorBanner"></div>
 
-  <!-- STATS STRIP -->
-  <div class="stats-strip">
-    <div class="stat-card">
-      <div class="stat-label">Best Est. Profit</div>
-      <div class="stat-value" id="statBestProfit">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Best Margin %</div>
-      <div class="stat-value" id="statBestROI">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Avg Fill Time</div>
-      <div class="stat-value" id="statAvgFill">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Flips Found</div>
-      <div class="stat-value" id="statCount">—</div>
-    </div>
-  </div>
-
-  <!-- FILTERS -->
-  <div class="filters">
+  <div class="filter-row">
     <div class="filter-card">
-      <label class="filter-label" for="f-capital">💰 Capital (coins)</label>
-      <input class="filter-input" id="f-capital" type="number" value="50000000" min="0" placeholder="50000000">
+      <label class="filter-label" for="f-capital">💰 Capital</label>
+      <input class="filter-input" id="f-capital" type="text" value="50m" placeholder="50m">
     </div>
     <div class="filter-card">
-      <label class="filter-label" for="f-margin">📊 Min Margin / Item (coins)</label>
-      <input class="filter-input" id="f-margin" type="number" value="50" min="0" placeholder="50">
+      <label class="filter-label" for="f-margin">📊 Min Margin / Item</label>
+      <input class="filter-input" id="f-margin" type="text" value="50" placeholder="50">
     </div>
     <div class="filter-card">
       <label class="filter-label" for="f-pct">📈 Min Margin %</label>
-      <input class="filter-input" id="f-pct" type="number" value="1" min="0" step="0.1" placeholder="1">
+      <input class="filter-input" id="f-pct" type="text" value="1" placeholder="1">
     </div>
     <div class="filter-card">
       <label class="filter-label" for="f-vol">🔥 Min Daily Volume</label>
-      <input class="filter-input" id="f-vol" type="number" value="5000" min="0" placeholder="5000">
+      <input class="filter-input" id="f-vol" type="text" value="5k" placeholder="5k">
     </div>
+    <div class="toggle-wrap" id="deadToggle">
+      <span class="toggle-label-text">Hide ⚠ Dead</span>
+      <div class="toggle-row">
+        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+        <span class="toggle-state-text" id="toggleStateText">Off</span>
+      </div>
+    </div>
+    <button class="btn-reset" id="resetBtn">↺ Reset</button>
   </div>
 
-  <!-- STATUS BAR -->
   <div class="status-bar">
     <div class="status-count">
       Showing <strong id="resultCount">—</strong> flips &nbsp;·&nbsp; Sorted by <span id="sortLabel">Score</span>
@@ -574,23 +432,34 @@
     <div class="last-updated" id="lastUpdated">Fetching data…</div>
   </div>
 
-  <!-- TABLE -->
   <div class="table-wrapper">
     <table id="flipTable">
       <thead>
         <tr>
-          <th data-col="name">Item</th>
-          <th data-col="buyPrice">Buy Order</th>
-          <th data-col="sellPrice">Sell Order</th>
-          <th data-col="netMargin">Margin/Item</th>
-          <th data-col="marginPct">Margin %</th>
-          <th data-col="totalProfit">Est. Profit</th>
-          <th data-col="capitalNeeded">Capital Used</th>
-          <th data-col="dailyVolume">Daily Vol.</th>
-          <th data-col="fillHrs">Fill Time</th>
-          <th data-col="compLevel">Competition</th>
-          <th data-col="score" class="sort-active sort-desc">Score</th>
-          <th></th>
+          <th data-col="name"
+              data-tip="Item name from the Hypixel Bazaar.">Item</th>
+          <th data-col="buyPrice"
+              data-tip="Price you'll place your buy order at — nudged 0.1 above the current top bidder so your order is first in queue.">Buy Order</th>
+          <th data-col="sellPrice"
+              data-tip="Price you'll list your sell order at — nudged 0.1 below the current lowest ask so your listing sells first.">Sell Order</th>
+          <th data-col="netMargin"
+              data-tip="Profit per item after the 1.25% Bazaar tax. This flat coin amount matters — you're limited to 71k items per order.">Margin / Item</th>
+          <th data-col="marginPct"
+              data-tip="Return on investment as a percentage. Low % on a high-capital flip may not be worth locking up your coins.">Margin %</th>
+          <th data-col="totalProfit"
+              data-tip="Estimated total profit if the full order fills — capped at 71k items or your capital, whichever is lower.">Est. Profit</th>
+          <th data-col="capitalNeeded"
+              data-tip="Coins locked up in the buy order. Always at or below your capital filter.">Capital Used</th>
+          <th data-col="dailyVolume"
+              data-tip="Items traded per day. Higher volume means orders fill faster and the spread is less likely to be a trap.">Daily Vol.</th>
+          <th data-col="fillHrs"
+              data-tip="Rough estimate of how long your full buy order takes to fill based on daily volume. Does not account for your queue position.">Fill Time</th>
+          <th data-col="compLevel"
+              data-tip="Total active buy orders in the order book. More orders = more people potentially jumping your queue. Low ≤15, Medium ≤40, High 41+.">Competition</th>
+          <th data-col="score" class="sort-active sort-desc"
+              data-tip="Composite score weighting margin %, flat margin, volume, and fill time equally. Use as a starting point — not a final answer.">Score</th>
+          <th class="no-sort"
+              data-tip="Dead market warning: spread is very wide but weekly volume is very low. Could be a manipulation trap, or an item that simply never fills.">⚠</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -598,23 +467,43 @@
   </div>
 
 </div>
+
+<div id="col-tooltip"></div>
+
 <script>
 // ─── CONFIG ────────────────────────────────────────────
-const API_DIRECT = 'https://api.hypixel.net/v2/skyblock/bazaar';
+const API_DIRECT  = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const CORS_PROXY  = 'https://corsproxy.io/?url=';
-const TAX          = 0.0125;
-const MAX_QTY      = 71000;
-const REFRESH_SEC  = 60;
-const CIRC         = 2 * Math.PI * 16; // SVG ring circumference (r=16)
+const TAX         = 0.0125;
+const MAX_QTY     = 71000;
+const REFRESH_SEC = 60;
+const CIRC        = 2 * Math.PI * 16;
+const DEFAULTS    = { capital: '50m', margin: '50', pct: '1', vol: '5k' };
 
 // ─── STATE ─────────────────────────────────────────────
-let allItems      = [];
-let sortCol       = 'score';
-let sortDir       = 'desc';
-let timerCount    = REFRESH_SEC;
-let timerInterval = null;
-let useCorsProxy  = false;
-let isFirstLoad   = true;
+let allItems       = [];
+let sortCol        = 'score';
+let sortDir        = 'desc';
+let timerCount     = REFRESH_SEC;
+let timerInterval  = null;
+let useCorsProxy   = false;
+let isFirstLoad    = true;
+let hideDeadMarket = false;
+
+// ─── PARSE SHORTHAND NUMBERS ───────────────────────────
+// "1.5k" → 1500 | "1.89m" → 1890000 | "2b" → 2000000000 | "50" → 50
+function parseVal(raw) {
+  if (raw == null) return 0;
+  const s = String(raw).trim().toLowerCase().replace(/,/g, '');
+  if (!s || s === '-') return 0;
+  const last = s.slice(-1);
+  const n    = parseFloat(s);
+  if (isNaN(n)) return NaN;
+  if (last === 'k') return n * 1_000;
+  if (last === 'm') return n * 1_000_000;
+  if (last === 'b') return n * 1_000_000_000;
+  return n;
+}
 
 // ─── FORMAT HELPERS ────────────────────────────────────
 const fmt = {
@@ -625,18 +514,17 @@ const fmt = {
     if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
     return n.toFixed(1);
   },
-  pct(n)  { return isFinite(n) ? n.toFixed(2) + '%' : '—'; },
-  hrs(n)  {
+  pct(n) { return isFinite(n) ? n.toFixed(2) + '%' : '—'; },
+  hrs(n) {
     if (!isFinite(n) || n >= 9999) return '>99d';
-    if (n < 1/60)  return '<1m';
-    if (n < 1)     return Math.round(n * 60) + 'm';
-    if (n > 24*30) return '>30d';
-    if (n > 24)    return (n / 24).toFixed(1) + 'd';
+    if (n < 1 / 60)    return '<1m';
+    if (n < 1)         return Math.round(n * 60) + 'm';
+    if (n > 24 * 30)   return '>30d';
+    if (n > 24)        return (n / 24).toFixed(1) + 'd';
     return n.toFixed(1) + 'h';
   },
   name(id) {
-    return id
-      .split('_')
+    return id.split('_')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
   }
@@ -645,10 +533,10 @@ const fmt = {
 // ─── GET FILTERS ───────────────────────────────────────
 function getFilters() {
   return {
-    capital:   parseFloat(document.getElementById('f-capital').value) || 0,
-    minMargin: parseFloat(document.getElementById('f-margin').value)  || 0,
-    minPct:    parseFloat(document.getElementById('f-pct').value)     || 0,
-    minVol:    parseFloat(document.getElementById('f-vol').value)     || 0,
+    capital:   parseVal(document.getElementById('f-capital').value) || 0,
+    minMargin: parseVal(document.getElementById('f-margin').value)  || 0,
+    minPct:    parseVal(document.getElementById('f-pct').value)     || 0,
+    minVol:    parseVal(document.getElementById('f-vol').value)     || 0,
   };
 }
 
@@ -657,13 +545,9 @@ function computeItem(id, product, capital) {
   const { sell_summary, buy_summary, quick_status } = product;
   if (!sell_summary?.length || !buy_summary?.length) return null;
 
-  // NOTE: Hypixel's naming is inverted from what you'd expect:
-  //   sell_summary = the BID side (players who posted BUY orders, wanting to buy)
-  //   buy_summary  = the ASK side (players who posted SELL orders, wanting to sell)
-  //
-  // To flip, we:
-  //   - Place a BUY ORDER just above the current top bidder  → sell_summary[0] + 0.1
-  //   - Place a SELL ORDER just below the current top asker  → buy_summary[0]  - 0.1
+  // Hypixel API naming is inverted:
+  //   sell_summary = BID side (buy orders)  → [0] = highest bid
+  //   buy_summary  = ASK side (sell orders) → [0] = lowest ask
   const buyPrice  = sell_summary[0].pricePerUnit + 0.1;
   const sellPrice = buy_summary[0].pricePerUnit  - 0.1;
 
@@ -673,65 +557,63 @@ function computeItem(id, product, capital) {
   const netMargin = sellPrice - tax - buyPrice;
   if (netMargin <= 0) return null;
 
-  const marginPct    = (netMargin / buyPrice) * 100;
-  const qs           = quick_status || {};
-  const sellMW       = qs.sellMovingWeek || 0;
-  const buyMW        = qs.buyMovingWeek  || 0;
-  // Math.max: buyMovingWeek is frequently 0 from the API even for active items;
-  // using Math.min would zero out dailyVolume for everything.
-  const dailyVolume  = Math.max(sellMW, buyMW) / 7;
+  const marginPct = (netMargin / buyPrice) * 100;
+  const qs        = quick_status || {};
+
+  // buyMovingWeek is often 0 from the API — use Math.max
+  const sellMW      = qs.sellMovingWeek || 0;
+  const buyMW       = qs.buyMovingWeek  || 0;
+  const dailyVolume = Math.max(sellMW, buyMW) / 7;
 
   const maxQty       = Math.min(MAX_QTY, Math.floor(capital / buyPrice));
   if (maxQty <= 0) return null;
 
-  const totalProfit  = netMargin * maxQty;
-  const capitalNeeded= buyPrice  * maxQty;
-  const fillHrs      = dailyVolume > 0
-    ? maxQty / (dailyVolume / 24)
-    : 99999;
+  const totalProfit   = netMargin * maxQty;
+  const capitalNeeded = buyPrice  * maxQty;
+  const fillHrs       = dailyVolume > 0 ? maxQty / (dailyVolume / 24) : 99999;
 
-  // Competition: other buy orders at the top of the bid book (sell_summary = bid side)
-  const topOrders = sell_summary[0].orders || 1;
-  const competition = topOrders <= 3 ? 'Low' : topOrders <= 12 ? 'Medium' : 'High';
-  const compLevel   = topOrders <= 3 ? 0 : topOrders <= 12 ? 1 : 2;
+  // Competition = total buy orders in the book
+  // quick_status.sellOrders = orders on sell_summary (bid) side
+  const totalBuyOrders = qs.sellOrders || 1;
+  const competition    = totalBuyOrders <= 15 ? 'Low'
+                       : totalBuyOrders <= 40 ? 'Medium'
+                       : 'High';
+  const compLevel      = totalBuyOrders <= 15 ? 0
+                       : totalBuyOrders <= 40 ? 1
+                       : 2;
 
-  // Manipulation flag: huge spread but almost nothing trading
-  const isManipulated = marginPct > 10 && sellMW < 10000;
+  // Dead market flag: wide spread + very low volume
+  const isManipulated = marginPct > 10 && Math.max(sellMW, buyMW) < 10000;
 
   return {
     id, name: fmt.name(id),
     buyPrice, sellPrice, netMargin, marginPct,
     totalProfit, capitalNeeded,
     dailyVolume, fillHrs,
-    competition, compLevel,
+    competition, compLevel, totalBuyOrders,
     sellMovingWeek: sellMW,
-    topOrders,
-    isManipulated,
-    score: 0,
+    isManipulated, score: 0,
   };
 }
 
 // ─── COMPOSITE SCORE ───────────────────────────────────
 function computeScores(items) {
   if (items.length < 2) { items.forEach(i => i.score = 50); return; }
-
-  const extract = key => items.map(i => i[key]);
-  function normalize(v, arr) {
-    const min = Math.min(...arr), max = Math.max(...arr);
-    return max === min ? 0.5 : (v - min) / (max - min);
+  function norm(v, arr) {
+    const lo = Math.min(...arr), hi = Math.max(...arr);
+    return hi === lo ? 0.5 : (v - lo) / (hi - lo);
   }
-
-  const mpArr  = extract('marginPct');
-  const nmArr  = extract('netMargin');
-  const volArr = extract('dailyVolume');
-  const fhArr  = extract('fillHrs');
-
+  const mpArr  = items.map(i => i.marginPct);
+  const nmArr  = items.map(i => i.netMargin);
+  const volArr = items.map(i => i.dailyVolume);
+  const fhArr  = items.map(i => i.fillHrs);
   items.forEach(it => {
-    const mp  = normalize(it.marginPct,   mpArr);
-    const nm  = normalize(it.netMargin,   nmArr);
-    const vol = normalize(it.dailyVolume, volArr);
-    const fh  = 1 - normalize(it.fillHrs, fhArr); // lower fill time = better
-    it.score  = (mp * 0.30 + nm * 0.30 + vol * 0.25 + fh * 0.15) * 100;
+    it.score = (
+      norm(it.marginPct,   mpArr)  * 0.30 +
+      norm(it.netMargin,   nmArr)  * 0.30 +
+      norm(it.dailyVolume, volArr) * 0.25 +
+      (1 - norm(it.fillHrs, fhArr)) * 0.15
+    ) * 100;
   });
 }
 
@@ -749,66 +631,55 @@ async function fetchData() {
     const res = await fetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     data = await res.json();
-    if (!data.success) throw new Error('API success: false');
+    if (!data.success) throw new Error('API returned success: false');
     hideError();
   } catch (err) {
     if (!useCorsProxy) {
       useCorsProxy = true;
-      console.info('Direct fetch failed, trying CORS proxy…');
+      console.info('[WeirdFlip] Direct fetch blocked, retrying via CORS proxy…');
       return fetchData();
     }
     setStatus('error');
-    showError(`Could not reach Hypixel API. ${err.message}. Retrying in ${REFRESH_SEC}s.`);
+    showError(`Could not reach Hypixel API — ${err.message}. Will retry in ${REFRESH_SEC}s.`);
     document.getElementById('lastUpdated').textContent = 'Failed to fetch.';
     return;
   }
 
-  const filters  = getFilters();
+  const filters = getFilters();
   const computed = [];
-  let _cntTotal = 0, _cntSpread = 0, _cntMargin = 0, _cntPct = 0, _cntVol = 0;
+  let _s = 0, _m = 0, _p = 0, _v = 0, _total = 0;
 
   for (const [id, product] of Object.entries(data.products)) {
-    _cntTotal++;
+    _total++;
     const item = computeItem(id, product, filters.capital);
-    if (!item) continue;
-    _cntSpread++;
-    if (item.netMargin    < filters.minMargin) continue;
-    _cntMargin++;
-    if (item.marginPct    < filters.minPct)    continue;
-    _cntPct++;
-    if (item.dailyVolume  < filters.minVol)    continue;
-    _cntVol++;
+    if (!item) continue; _s++;
+    if (item.netMargin   < filters.minMargin) continue; _m++;
+    if (item.marginPct   < filters.minPct)    continue; _p++;
+    if (item.dailyVolume < filters.minVol)    continue; _v++;
     computed.push(item);
   }
 
-  console.log(
-    `[WeirdFlip] API items: ${_cntTotal} → valid spread: ${_cntSpread}` +
-    ` → margin≥${filters.minMargin}: ${_cntMargin}` +
-    ` → pct≥${filters.minPct}%: ${_cntPct}` +
-    ` → vol≥${filters.minVol}/d: ${_cntVol} → final: ${computed.length}`
-  );
+  console.log(`[WeirdFlip] ${_total} items → spread: ${_s} → margin≥${filters.minMargin}: ${_m} → pct≥${filters.minPct}%: ${_p} → vol≥${filters.minVol}/d: ${_v} → shown: ${computed.length}`);
 
   computeScores(computed);
   allItems = computed;
-
   setStatus('live');
   renderTable(isFirstLoad);
-  updateStats();
   isFirstLoad = false;
 
   const t = new Date();
   document.getElementById('lastUpdated').textContent =
-    `Updated ${t.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+    `Updated ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
 }
 
-// ─── SORT ──────────────────────────────────────────────
+// ─── SORT + FILTER ─────────────────────────────────────
 function sorted() {
-  return [...allItems].sort((a, b) => {
+  let items = hideDeadMarket ? allItems.filter(i => !i.isManipulated) : [...allItems];
+  return items.sort((a, b) => {
     let av = a[sortCol], bv = b[sortCol];
     if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
     if (av === bv) return 0;
-    const cmp = av > bv ? 1 : -1;
-    return sortDir === 'asc' ? cmp : -cmp;
+    return (av > bv ? 1 : -1) * (sortDir === 'asc' ? 1 : -1);
   });
 }
 
@@ -816,40 +687,35 @@ function sorted() {
 function renderTable(animate) {
   const items = sorted();
   const tbody = document.getElementById('tableBody');
-
-  document.getElementById('resultCount').textContent = items.length;
   const colLabels = {
-    name:'Item', buyPrice:'Buy Order', sellPrice:'Sell Order',
-    netMargin:'Margin/Item', marginPct:'Margin %', totalProfit:'Est. Profit',
-    capitalNeeded:'Capital Used', dailyVolume:'Daily Vol.',
-    fillHrs:'Fill Time', compLevel:'Competition', score:'Score'
+    name: 'Item', buyPrice: 'Buy Order', sellPrice: 'Sell Order',
+    netMargin: 'Margin/Item', marginPct: 'Margin %', totalProfit: 'Est. Profit',
+    capitalNeeded: 'Capital Used', dailyVolume: 'Daily Vol.',
+    fillHrs: 'Fill Time', compLevel: 'Competition', score: 'Score'
   };
+  document.getElementById('resultCount').textContent = items.length;
   document.getElementById('sortLabel').textContent = colLabels[sortCol] || sortCol;
 
   if (!items.length) {
     tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="12">
       <div class="empty-state">
         <div class="empty-icon">🪙</div>
-        <p>No flips match your filters.</p>
-        <p>Try lowering the margin % or volume requirements.</p>
+        <p>No flips match your current filters.</p>
+        <p>Try lowering the margin %, volume, or flat margin requirements.</p>
       </div></td></tr>`;
     return;
   }
 
   const rows = items.map((item, i) => {
-    const mColor = item.marginPct >= 5 ? 'td-green' : item.marginPct >= 2 ? 'td-amber' : 'td-dim';
+    const mColor = item.marginPct  >= 5   ? 'td-green' : item.marginPct >= 2  ? 'td-amber' : 'td-dim';
     const pColor = item.totalProfit >= 1e6 ? 'td-green' : item.totalProfit >= 2e5 ? 'td-amber' : 'td-dim';
-    const fColor = item.fillHrs <= 6 ? 'td-green' : item.fillHrs <= 48 ? 'td-amber' : 'td-red';
-
-    const badgeCls = item.compLevel === 0 ? 'badge-low' : item.compLevel === 1 ? 'badge-medium' : 'badge-high';
-
-    const flag = item.isManipulated
-      ? `<span class="warn-flag" data-tip="Wide spread (&gt;10%) but only ${fmt.coins(item.sellMovingWeek)} items moved last week — possible manipulation or dead market">⚠</span>`
+    const fColor = item.fillHrs    <= 6   ? 'td-green' : item.fillHrs <= 48   ? 'td-amber' : 'td-red';
+    const bClass = item.compLevel === 0 ? 'badge-low' : item.compLevel === 1 ? 'badge-medium' : 'badge-high';
+    const flag   = item.isManipulated
+      ? `<span class="warn-flag" data-tip="Spread >10% but only ${fmt.coins(item.sellMovingWeek)} items moved last week — possible manipulation or dead market.">⚠</span>`
       : '';
-
     const score = Math.round(item.score);
     const delay = animate ? i * 35 : 0;
-
     return `<tr data-id="${item.id}" style="transition-delay:${delay}ms">
       <td class="td-name" title="${item.id}">${item.name}</td>
       <td class="td-mono td-dim">${fmt.coins(item.buyPrice)}</td>
@@ -861,9 +727,9 @@ function renderTable(animate) {
       <td class="td-mono td-dim">${fmt.coins(item.dailyVolume)}/d</td>
       <td class="td-mono ${fColor}">${fmt.hrs(item.fillHrs)}</td>
       <td>
-        <span class="badge ${badgeCls}">
+        <span class="badge ${bClass}">
           <span class="badge-dot"></span>${item.competition}
-          <span style="opacity:0.6;font-size:0.55rem">(${item.topOrders})</span>
+          <span style="opacity:0.5;font-size:0.55rem;margin-left:2px">(${item.totalBuyOrders})</span>
         </span>
       </td>
       <td>
@@ -880,7 +746,6 @@ function renderTable(animate) {
 
   tbody.innerHTML = rows.join('');
 
-  // Staggered visibility + score bar animation
   requestAnimationFrame(() => {
     tbody.querySelectorAll('tr').forEach((row, i) => {
       setTimeout(() => {
@@ -892,82 +757,43 @@ function renderTable(animate) {
   });
 }
 
-// ─── STATS ─────────────────────────────────────────────
-function updateStats() {
-  if (!allItems.length) return;
-  const bestProfit = Math.max(...allItems.map(i => i.totalProfit));
-  const bestROI    = Math.max(...allItems.map(i => i.marginPct));
-  const validFills = allItems.filter(i => i.fillHrs < 9999);
-  const avgFill    = validFills.length
-    ? validFills.reduce((a, b) => a + b.fillHrs, 0) / validFills.length
-    : 0;
-
-  countUp('statBestProfit', bestProfit, v => fmt.coins(v));
-  countUp('statBestROI',    bestROI,    v => fmt.pct(v));
-  countUp('statAvgFill',    avgFill,    v => fmt.hrs(v));
-  document.getElementById('statCount').textContent = allItems.length;
-}
-
-function countUp(id, target, formatter) {
-  const el = document.getElementById(id);
-  const start = performance.now();
-  const dur = 900;
-  (function tick(now) {
-    const p = Math.min((now - start) / dur, 1);
-    const ease = 1 - Math.pow(1 - p, 3);
-    el.textContent = formatter(target * ease);
-    if (p < 1) requestAnimationFrame(tick);
-    else el.textContent = formatter(target);
-  })(start);
-}
-
 // ─── SKELETON ──────────────────────────────────────────
 function showSkeletons() {
   const widths = [140, 70, 70, 65, 55, 85, 85, 80, 55, 90, 50, 10];
-  const rows = Array(10).fill(0).map(() =>
-    `<tr style="opacity:1;transform:none">${
-      widths.map(w =>
-        `<td><div class="skeleton-cell" style="width:${w}px"></div></td>`
-      ).join('')
-    }</tr>`
-  ).join('');
-  document.getElementById('tableBody').innerHTML = rows;
+  document.getElementById('tableBody').innerHTML =
+    Array(10).fill(0).map(() =>
+      `<tr style="opacity:1;transform:none">${
+        widths.map(w => `<td><div class="skeleton-cell" style="width:${w}px"></div></td>`).join('')
+      }</tr>`
+    ).join('');
 }
 
 // ─── STATUS ────────────────────────────────────────────
 function setStatus(s) {
-  const dot   = document.getElementById('liveDot');
-  const label = document.getElementById('liveStatus');
+  const dot = document.getElementById('liveDot');
+  const lbl = document.getElementById('liveStatus');
   dot.className = 'live-dot';
-  if (s === 'loading') { dot.classList.add('loading'); label.textContent = 'UPDATING'; }
-  else if (s === 'error') { dot.classList.add('error'); label.textContent = 'ERROR'; }
-  else { label.textContent = 'LIVE'; }
+  if (s === 'loading') { dot.classList.add('loading'); lbl.textContent = 'UPDATING'; }
+  else if (s === 'error') { dot.classList.add('error'); lbl.textContent = 'ERROR'; }
+  else lbl.textContent = 'LIVE';
 }
-
 function showError(msg) {
   const b = document.getElementById('errorBanner');
-  b.textContent = msg;
-  b.style.display = 'block';
+  b.textContent = msg; b.style.display = 'block';
 }
 function hideError() {
   document.getElementById('errorBanner').style.display = 'none';
 }
 
-// ─── REFRESH RING ──────────────────────────────────────
+// ─── TIMER ─────────────────────────────────────────────
 function startTimer() {
   timerCount = REFRESH_SEC;
   if (timerInterval) clearInterval(timerInterval);
-
   timerInterval = setInterval(() => {
     timerCount = Math.max(0, timerCount - 1);
-    const pct = timerCount / REFRESH_SEC;
-    const offset = CIRC * (1 - pct);
-    document.getElementById('ringProgress').style.strokeDashoffset = offset;
-
-    if (timerCount <= 0) {
-      clearInterval(timerInterval);
-      fetchData().then(startTimer);
-    }
+    document.getElementById('ringProgress').style.strokeDashoffset =
+      CIRC * (1 - timerCount / REFRESH_SEC);
+    if (timerCount <= 0) { clearInterval(timerInterval); fetchData().then(startTimer); }
   }, 1000);
 }
 
@@ -980,26 +806,78 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
 document.querySelectorAll('th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
-    if (sortCol === col) sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-    else { sortCol = col; sortDir = 'desc'; }
-
-    document.querySelectorAll('th').forEach(h => {
-      h.classList.remove('sort-active', 'sort-asc', 'sort-desc');
-    });
+    sortDir = sortCol === col ? (sortDir === 'asc' ? 'desc' : 'asc') : 'desc';
+    sortCol = col;
+    document.querySelectorAll('th').forEach(h =>
+      h.classList.remove('sort-active', 'sort-asc', 'sort-desc'));
     th.classList.add('sort-active', sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
     renderTable(false);
   });
 });
 
-// ─── FILTER EVENTS ─────────────────────────────────────
+// ─── FILTER INPUTS ─────────────────────────────────────
 let filterDebounce;
-['f-capital','f-margin','f-pct','f-vol'].forEach(id => {
-  document.getElementById(id).addEventListener('input', () => {
-    clearTimeout(filterDebounce);
-    filterDebounce = setTimeout(() => {
-      isFirstLoad = false;
-      fetchData().then(startTimer);
-    }, 700);
+function onFilterChange() {
+  ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id => {
+    const el = document.getElementById(id);
+    const v  = parseVal(el.value);
+    el.classList.toggle('invalid', isNaN(v) || v < 0);
+  });
+  clearTimeout(filterDebounce);
+  filterDebounce = setTimeout(() => {
+    isFirstLoad = false;
+    fetchData().then(startTimer);
+  }, 700);
+}
+['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
+  document.getElementById(id).addEventListener('input', onFilterChange));
+
+// ─── RESET ─────────────────────────────────────────────
+document.getElementById('resetBtn').addEventListener('click', () => {
+  document.getElementById('f-capital').value = DEFAULTS.capital;
+  document.getElementById('f-margin').value  = DEFAULTS.margin;
+  document.getElementById('f-pct').value     = DEFAULTS.pct;
+  document.getElementById('f-vol').value     = DEFAULTS.vol;
+  ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
+    document.getElementById(id).classList.remove('invalid'));
+  clearTimeout(filterDebounce);
+  isFirstLoad = false;
+  fetchData().then(startTimer);
+});
+
+// ─── DEAD MARKET TOGGLE ────────────────────────────────
+document.getElementById('deadToggle').addEventListener('click', () => {
+  hideDeadMarket = !hideDeadMarket;
+  const el = document.getElementById('deadToggle');
+  el.classList.toggle('active', hideDeadMarket);
+  document.getElementById('toggleStateText').textContent = hideDeadMarket ? 'On' : 'Off';
+  renderTable(false);
+});
+
+// ─── COLUMN HEADER TOOLTIPS (500ms delay) ──────────────
+const colTooltip = document.getElementById('col-tooltip');
+let tipTimer = null;
+
+document.querySelectorAll('th[data-tip]').forEach(th => {
+  th.addEventListener('mouseenter', () => {
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(() => {
+      const r = th.getBoundingClientRect();
+      colTooltip.textContent = th.dataset.tip;
+      colTooltip.classList.add('visible');
+      let left = r.left;
+      if (left + 240 > window.innerWidth - 12) left = window.innerWidth - 252;
+      colTooltip.style.left = Math.max(8, left) + 'px';
+      colTooltip.style.top  = (r.bottom + 6) + 'px';
+    }, 500);
+  });
+  th.addEventListener('mouseleave', () => {
+    clearTimeout(tipTimer);
+    colTooltip.classList.remove('visible');
+  });
+  th.addEventListener('click', () => {
+    clearTimeout(tipTimer);
+    colTooltip.classList.remove('visible');
   });
 });
 
