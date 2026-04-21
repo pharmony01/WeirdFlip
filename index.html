@@ -361,6 +361,55 @@
     }
     #col-tooltip.visible { opacity: 1; }
 
+    /* ── SPARKLINE TOOLTIP ── */
+    #sparkline-tooltip {
+      position: fixed;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px;
+      z-index: 700; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s;
+      min-width: 240px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.8);
+    }
+    #sparkline-tooltip.visible { opacity: 1; }
+    .spark-header {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .spark-range-label {
+      font-family: var(--font-mono); font-size: 0.58rem;
+      color: var(--text-muted); opacity: 0.7;
+    }
+    .spark-svg { display: block; overflow: visible; }
+    .spark-legend {
+      display: flex; gap: 14px; margin-top: 9px;
+    }
+    .spark-legend-item {
+      display: flex; align-items: center; gap: 5px;
+      font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-dim);
+    }
+    .spark-swatch {
+      width: 18px; height: 2px; border-radius: 1px; flex-shrink: 0;
+    }
+    .spark-loading, .spark-error {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--text-muted); padding: 28px 0; text-align: center;
+    }
+    .spark-loading::after {
+      content: ''; display: inline-block;
+      animation: spark-dots 1.2s steps(4, end) infinite;
+    }
+    @keyframes spark-dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+      100% { content: ''; }
+    }
+    .spark-error { color: var(--text-muted); opacity: 0.6; }
+
     /* Skeleton shimmer */
     .skeleton-cell {
       height: 14px; border-radius: 4px;
@@ -487,7 +536,7 @@
           <th data-col="coinsPerHour" class="sort-active sort-desc"
               data-tip="Estimated coins earned per hour based on realistic fill time (competition-adjusted).">Coins/hr</th>
           <th data-col="capitalNeeded"
-              data-tip="Coins locked up in the buy order. Always at or below your capital filter.">Capital Used</th>
+              data-tip="Coins locked up in the buy order (always ≤ your capital filter), plus the quantity of items that fills at that capital. e.g. 48.5M (×405) means 405 items bought.">Capital Used</th>
           <th data-col="dailyVolume"
               data-tip="↓ Sell orders/day — how fast your buy order fills. ↑ Buy orders/day — how fast your sell order fills afterward. The lower side is your bottleneck and is used for filtering. Values shown separately so you can spot imbalances at a glance — amber means that side is 3× thinner than the other.">Daily Vol.</th>
           <th data-col="fillHrs"
@@ -508,6 +557,7 @@
 
 <div id="col-tooltip"></div>
 <div id="flag-tooltip"></div>
+<div id="sparkline-tooltip"></div>
 
 <script>
 // ─── CONFIG ─────────────────────────────────────────────────────────────────
@@ -680,7 +730,7 @@ function computeItem(id, product, capital) {
   return {
     id, name: fmt.name(id),
     buyPrice, sellPrice, netMargin, marginPct,
-    totalProfit, capitalNeeded,
+    totalProfit, capitalNeeded, maxQty,
     sellMovingWeek: sellMW, buyMovingWeek: buyMW,
     dailyVolume, sellDailyVol, buyDailyVol, volImbalance,
     fillHrs, fillHrsRealistic, coinsPerHour,
@@ -814,7 +864,7 @@ function renderTable(animate) {
       <td class="td-mono ${mColor}">${fmt.pct(item.marginPct)}</td>
       <td class="td-mono ${pColor}">${fmt.coins(item.totalProfit)}</td>
       <td class="td-mono ${chColor}">${item.coinsPerHour > 0 ? fmt.coins(item.coinsPerHour) + '/h' : '—'}</td>
-      <td class="td-mono td-dim">${fmt.coins(item.capitalNeeded)}</td>
+      <td class="td-mono td-dim">${fmt.coins(item.capitalNeeded)}<span style="color:var(--text-muted);font-size:0.7rem;margin-left:5px">(×${item.maxQty >= 1000 ? (item.maxQty/1000).toFixed(1)+'k' : item.maxQty.toLocaleString()})</span></td>
       <td>
         <div class="vol-cell">
           <span class="vol-line ${sVolC}">↓ ${fmt.coins(item.sellDailyVol)}/d</span>
@@ -1070,6 +1120,172 @@ document.getElementById('tableBody').addEventListener('mouseout', e => {
   if (!flag) return;
   clearTimeout(flagTipTimer);
   flagTooltip.classList.remove('visible');
+});
+
+// ─── SPARKLINE ───────────────────────────────────────────────────────────────
+// Shows a 7-day buy/sell price chart on row hover, with a 500ms delay.
+// Data fetched from CoflNet's public bazaar history API; cached per item.
+const SPARK_API      = id => `https://sky.coflnet.com/api/bazaar/${encodeURIComponent(id)}/history`;
+const sparkCache     = {};   // itemId → normalised [{t, buy, sell}, …]
+const sparkInFlight  = {};   // itemId → true  (dedup concurrent fetches)
+const sparkTooltip   = document.getElementById('sparkline-tooltip');
+let   sparkTimer     = null;
+let   sparkActiveId  = null;
+
+// ── Normalise whatever CoflNet sends back into [{t, buy, sell}]
+function normaliseSparkData(raw) {
+  if (!Array.isArray(raw) || !raw.length) return null;
+  const sample = raw[0];
+  // Support multiple field-name conventions seen in the wild
+  const getT    = o => o.timestamp ?? o.time ?? o.Timestamp ?? 0;
+  const getBuy  = o => o.buy  ?? o.buyPrice  ?? o.BuyPrice  ?? 0;
+  const getSell = o => o.sell ?? o.sellPrice ?? o.SellPrice ?? 0;
+  const pts = raw
+    .map(o => ({ t: new Date(getT(o)).getTime(), buy: +getBuy(o), sell: +getSell(o) }))
+    .filter(p => isFinite(p.t) && p.buy > 0 && p.sell > 0)
+    .sort((a, b) => a.t - b.t);
+  // Keep only the last 7 days
+  const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+  return pts.filter(p => p.t >= cutoff);
+}
+
+// ── Build SVG sparkline from normalised points
+function buildSparkSVG(pts) {
+  const W = 220, H = 72, PAD = 4;
+  if (!pts || pts.length < 2) return null;
+
+  const tMin = pts[0].t, tMax = pts[pts.length - 1].t;
+  const allVals = pts.flatMap(p => [p.buy, p.sell]);
+  const vMin = Math.min(...allVals), vMax = Math.max(...allVals);
+  const vRange = vMax - vMin || 1;
+
+  const px = t  => PAD + ((t  - tMin)  / (tMax - tMin  || 1)) * (W - PAD * 2);
+  const py = v  => (H - PAD) - ((v - vMin) / vRange) * (H - PAD * 2);
+
+  const polyline = (field, color) => {
+    const points = pts.map(p => `${px(p.t).toFixed(1)},${py(p[field]).toFixed(1)}`).join(' ');
+    return `<polyline points="${points}" fill="none" stroke="${color}" stroke-width="1.8"
+              stroke-linejoin="round" stroke-linecap="round" opacity="0.9"/>`;
+  };
+
+  // Subtle area fill under buy line
+  const areaPath = [
+    `M ${px(pts[0].t).toFixed(1)},${H - PAD}`,
+    ...pts.map(p => `L ${px(p.t).toFixed(1)},${py(p.buy).toFixed(1)}`),
+    `L ${px(pts[pts.length-1].t).toFixed(1)},${H - PAD} Z`,
+  ].join(' ');
+
+  return `<svg class="spark-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs>
+      <linearGradient id="sg" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stop-color="#f0a500" stop-opacity="0.18"/>
+        <stop offset="100%" stop-color="#f0a500" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaPath}" fill="url(#sg)"/>
+    ${polyline('sell', '#22d3a0')}
+    ${polyline('buy',  '#f0a500')}
+  </svg>`;
+}
+
+// ── Render sparkline into the tooltip (data already fetched)
+function renderSparkContent(id, pts) {
+  if (!pts || pts.length < 2) {
+    sparkTooltip.innerHTML =
+      `<div class="spark-header">7-Day Price History</div>
+       <div class="spark-error">No history available</div>`;
+    return;
+  }
+  const svg = buildSparkSVG(pts);
+  const lastBuy  = pts[pts.length - 1].buy;
+  const lastSell = pts[pts.length - 1].sell;
+  sparkTooltip.innerHTML = `
+    <div class="spark-header">
+      <span>7-Day Price History</span>
+      <span class="spark-range-label">${pts.length} data pts</span>
+    </div>
+    ${svg || '<div class="spark-error">Insufficient data</div>'}
+    <div class="spark-legend">
+      <div class="spark-legend-item">
+        <div class="spark-swatch" style="background:var(--accent)"></div>
+        Buy&nbsp;<span style="color:var(--accent)">${fmt.coins(lastBuy)}</span>
+      </div>
+      <div class="spark-legend-item">
+        <div class="spark-swatch" style="background:var(--green)"></div>
+        Sell&nbsp;<span style="color:var(--green)">${fmt.coins(lastSell)}</span>
+      </div>
+    </div>`;
+}
+
+// ── Position the sparkline tooltip near the hovered row
+function positionSparkTooltip(row) {
+  const r  = row.getBoundingClientRect();
+  const tw = 256, th = 160; // approx dimensions
+  let top  = r.bottom + 6;
+  if (top + th > window.innerHeight - 8) top = r.top - th - 6;
+  let left = r.left + 8;
+  if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+  sparkTooltip.style.left = Math.max(8, left) + 'px';
+  sparkTooltip.style.top  = Math.max(8, top)  + 'px';
+}
+
+// ── Fetch + cache, then render if tooltip is still for this item
+async function fetchAndRenderSparkline(id, row) {
+  if (sparkInFlight[id]) return;
+  sparkInFlight[id] = true;
+  try {
+    const res  = await fetch(SPARK_API(id), { cache: 'default' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const raw  = await res.json();
+    const pts  = normaliseSparkData(raw);
+    sparkCache[id] = pts;
+    if (sparkActiveId === id) renderSparkContent(id, pts);
+  } catch (e) {
+    sparkCache[id] = null;
+    if (sparkActiveId === id) {
+      sparkTooltip.innerHTML =
+        `<div class="spark-header">7-Day Price History</div>
+         <div class="spark-error">Could not load data</div>`;
+    }
+  } finally {
+    delete sparkInFlight[id];
+  }
+}
+
+// ── Show sparkline after 500ms hover
+function onRowMouseenter(e) {
+  const row = e.currentTarget;
+  const id  = row.dataset.id;
+  if (!id) return;
+  clearTimeout(sparkTimer);
+  sparkTimer = setTimeout(() => {
+    sparkActiveId = id;
+    positionSparkTooltip(row);
+    if (sparkCache.hasOwnProperty(id)) {
+      renderSparkContent(id, sparkCache[id]);
+    } else {
+      sparkTooltip.innerHTML =
+        `<div class="spark-header">7-Day Price History</div>
+         <div class="spark-loading">Loading chart</div>`;
+      fetchAndRenderSparkline(id, row);
+    }
+    sparkTooltip.classList.add('visible');
+  }, 500);
+}
+
+function onRowMouseleave() {
+  clearTimeout(sparkTimer);
+  sparkActiveId = null;
+  sparkTooltip.classList.remove('visible');
+}
+
+// ── Delegate row hover via event delegation on tbody
+document.getElementById('tableBody').addEventListener('mouseover', e => {
+  const row = e.target.closest('tr[data-id]');
+  if (!row || row.dataset.sparkBound) return;
+  row.dataset.sparkBound = '1';
+  row.addEventListener('mouseenter', onRowMouseenter);
+  row.addEventListener('mouseleave', onRowMouseleave);
 });
 
 // ─── INIT ────────────────────────────────────────────────────────────────────
