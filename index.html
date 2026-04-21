@@ -474,13 +474,13 @@
           <th data-col="sellPrice"
               data-tip="Price you'll list your sell order at — nudged 0.1 below the current lowest ask so your listing sells first.">Sell Order</th>
           <th data-col="netMargin"
-              data-tip="Profit per item after the 1.25% Bazaar tax. This flat coin amount matters — you're limited to 71k items per order.">Margin / Item</th>
+              data-tip="Profit per item after the 1.25% Bazaar tax.">Margin / Item</th>
           <th data-col="marginPct"
               data-tip="Return on investment as a percentage. Low % on a high-capital flip may not be worth locking up your coins.">Margin %</th>
           <th data-col="totalProfit"
-              data-tip="Estimated total profit if the full order fills — capped at 71k items or your capital, whichever is lower.">Est. Profit</th>
+              data-tip="Estimated total profit if the full order fills. Capped at 71,680 items or your capital, whichever is lower.">Est. Profit</th>
           <th data-col="coinsPerHour" class="sort-active sort-desc"
-              data-tip="Estimated coins earned per hour based on realistic fill time (competition-adjusted). Capital-independent — the same flip earns the same coins/hr at 50M or 500M. More useful than total profit alone.">Coins/hr</th>
+              data-tip="Estimated coins earned per hour based on realistic fill time (competition-adjusted).">Coins/hr</th>
           <th data-col="capitalNeeded"
               data-tip="Coins locked up in the buy order. Always at or below your capital filter.">Capital Used</th>
           <th data-col="dailyVolume"
@@ -488,11 +488,11 @@
           <th data-col="fillHrs"
               data-tip="Ideal fill time — how long your full buy order takes to fill assuming you are the only buyer. Reality will be slower.">Fill (Ideal)</th>
           <th data-col="fillHrsRealistic"
-              data-tip="Realistic fill time after applying a competition penalty: Low = 1.5×, Medium = 3×, High = 6×. These multipliers are approximate — treat them as order-of-magnitude estimates, not precise predictions.">Fill (Real)</th>
+              data-tip="Realistic fill time after applying a competition penalty: Low = 1.5×, Medium = 3×, High = 6×. Rough guesstimates.">Fill (Real)</th>
           <th data-col="compLevel"
               data-tip="Total active buy orders in the order book. More orders = more people potentially jumping your queue. Low ≤15, Medium ≤40, High 41+.">Competition</th>
           <th class="no-sort"
-              data-tip="Dead market warning: spread >8%, very low weekly volume, and very few orders. Likely a planted spread or dormant item — almost certainly won't fill at these prices.">⚠</th>
+              data-tip="Dead market warning: spread >8%, very low weekly volume, and very few orders. Very likely to not fill at these prices.">⚠</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
