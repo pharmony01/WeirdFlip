@@ -1197,8 +1197,11 @@ function renderSparkContent(id, pts) {
     return;
   }
   const svg = buildSparkSVG(pts);
-  const lastBuy  = pts[pts.length - 1].buy;
-  const lastSell = pts[pts.length - 1].sell;
+  // CoflNet uses the same inverted Hypixel naming:
+  //   `buy`  field = buy order price  (bid / lower)  → gold line
+  //   `sell` field = sell order price (ask / higher)  → green line
+  const lastBuyOrder  = pts[pts.length - 1].buy;
+  const lastSellOrder = pts[pts.length - 1].sell;
   sparkTooltip.innerHTML = `
     <div class="spark-header">
       <span>7-Day Price History</span>
@@ -1208,11 +1211,11 @@ function renderSparkContent(id, pts) {
     <div class="spark-legend">
       <div class="spark-legend-item">
         <div class="spark-swatch" style="background:var(--accent)"></div>
-        Buy&nbsp;<span style="color:var(--accent)">${fmt.coins(lastBuy)}</span>
+        Buy Order&nbsp;<span style="color:var(--accent)">${fmt.coins(lastBuyOrder)}</span>
       </div>
       <div class="spark-legend-item">
         <div class="spark-swatch" style="background:var(--green)"></div>
-        Sell&nbsp;<span style="color:var(--green)">${fmt.coins(lastSell)}</span>
+        Sell Order&nbsp;<span style="color:var(--green)">${fmt.coins(lastSellOrder)}</span>
       </div>
     </div>`;
 }
