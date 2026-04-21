@@ -677,7 +677,9 @@ function computeItem(id, product, capital) {
   const qs           = quick_status || {};
   const sellMW       = qs.sellMovingWeek || 0;
   const buyMW        = qs.buyMovingWeek  || 0;
-  const dailyVolume  = Math.min(sellMW, buyMW) / 7;
+  // Math.max: buyMovingWeek is frequently 0 from the API even for active items;
+  // using Math.min would zero out dailyVolume for everything.
+  const dailyVolume  = Math.max(sellMW, buyMW) / 7;
 
   const maxQty       = Math.min(MAX_QTY, Math.floor(capital / buyPrice));
   if (maxQty <= 0) return null;
@@ -763,15 +765,28 @@ async function fetchData() {
 
   const filters  = getFilters();
   const computed = [];
+  let _cntTotal = 0, _cntSpread = 0, _cntMargin = 0, _cntPct = 0, _cntVol = 0;
 
   for (const [id, product] of Object.entries(data.products)) {
+    _cntTotal++;
     const item = computeItem(id, product, filters.capital);
     if (!item) continue;
+    _cntSpread++;
     if (item.netMargin    < filters.minMargin) continue;
+    _cntMargin++;
     if (item.marginPct    < filters.minPct)    continue;
+    _cntPct++;
     if (item.dailyVolume  < filters.minVol)    continue;
+    _cntVol++;
     computed.push(item);
   }
+
+  console.log(
+    `[WeirdFlip] API items: ${_cntTotal} → valid spread: ${_cntSpread}` +
+    ` → margin≥${filters.minMargin}: ${_cntMargin}` +
+    ` → pct≥${filters.minPct}%: ${_cntPct}` +
+    ` → vol≥${filters.minVol}/d: ${_cntVol} → final: ${computed.length}`
+  );
 
   computeScores(computed);
   allItems = computed;
