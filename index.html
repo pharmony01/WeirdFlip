@@ -60,7 +60,7 @@
     }
 
     .container {
-      max-width: 1700px; margin: 0 auto;
+      max-width: 1800px; margin: 0 auto;
       padding: 0 28px 60px;
       position: relative; z-index: 1;
     }
@@ -111,7 +111,9 @@
     .refresh-btn {
       position: relative; width: 40px; height: 40px;
       cursor: pointer; flex-shrink: 0;
+      transition: opacity 0.2s;
     }
+    .refresh-btn.disabled { opacity: 0.35; pointer-events: none; }
     .refresh-btn svg { transform: rotate(-90deg); }
     .ring-bg { fill: none; stroke: var(--border); stroke-width: 2.5; }
     .ring-progress {
@@ -224,7 +226,7 @@
       border: 1px solid var(--border); border-radius: 14px;
       overflow: hidden; overflow-x: auto;
     }
-    table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+    table { width: 100%; border-collapse: collapse; min-width: 1500px; }
     thead { background: var(--surface); }
 
     th {
@@ -262,7 +264,7 @@
     td { padding: 13px 16px; font-size: 0.85rem; white-space: nowrap; }
     .td-name {
       font-family: var(--font-body); font-weight: 600; color: var(--text);
-      max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+      max-width: 200px; overflow: hidden; text-overflow: ellipsis;
       transition: color 0.2s;
     }
     .td-mono { font-family: var(--font-mono); font-size: 0.8rem; }
@@ -286,14 +288,15 @@
     .badge-high   { background: var(--red-dim);   color: var(--red);   border: 1px solid rgba(248,113,113,0.2); }
     .badge-high   .badge-dot { background: var(--red); }
 
-    /* Dead market flag — tooltip opens DOWNWARD */
-    .warn-flag {
+    /* ── FLAGS (dead market + volume imbalance) ── */
+    /* Tooltips always open downward */
+    .flag-icon {
       display: inline-flex; align-items: center; justify-content: center;
-      width: 26px; height: 26px; border-radius: 6px;
-      background: var(--amber-dim); border: 1px solid rgba(251,191,36,0.2);
-      color: var(--amber); font-size: 13px; cursor: help; position: relative;
+      width: 24px; height: 24px; border-radius: 6px;
+      font-size: 12px; cursor: help; position: relative;
+      flex-shrink: 0;
     }
-    .warn-flag::after {
+    .flag-icon::after {
       content: attr(data-tip);
       position: absolute;
       top: calc(100% + 8px);
@@ -306,7 +309,15 @@
       transition: opacity 0.2s; z-index: 100;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
     }
-    .warn-flag:hover::after { opacity: 1; }
+    .flag-icon:hover::after { opacity: 1; }
+    .flag-dead {
+      background: var(--amber-dim); border: 1px solid rgba(251,191,36,0.2);
+      color: var(--amber);
+    }
+    .flag-imbal {
+      background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.2);
+      color: var(--blue); margin-left: 5px;
+    }
 
     .score-wrap { display: flex; align-items: center; gap: 9px; }
     .score-track {
@@ -323,13 +334,25 @@
       color: var(--text-dim); min-width: 26px;
     }
 
+    /* Fill (Ideal) vs Fill (Real) — show the gap visually */
+    .fill-pair {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .fill-ideal {
+      font-family: var(--font-mono); font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .fill-real {
+      font-family: var(--font-mono); font-size: 0.8rem;
+    }
+
     /* Column header tooltip (JS-positioned, 500ms delay) */
     #col-tooltip {
       position: fixed;
       background: var(--card); border: 1px solid var(--border);
       color: var(--text-dim); font-family: var(--font-body); font-size: 0.75rem;
       line-height: 1.55; padding: 9px 13px; border-radius: 8px;
-      max-width: 240px; pointer-events: none;
+      max-width: 260px; pointer-events: none;
       box-shadow: 0 8px 32px rgba(0,0,0,0.6);
       z-index: 200; opacity: 0; transition: opacity 0.15s;
     }
@@ -448,18 +471,22 @@
               data-tip="Return on investment as a percentage. Low % on a high-capital flip may not be worth locking up your coins.">Margin %</th>
           <th data-col="totalProfit"
               data-tip="Estimated total profit if the full order fills — capped at 71k items or your capital, whichever is lower.">Est. Profit</th>
+          <th data-col="coinsPerHour"
+              data-tip="Estimated coins earned per hour based on realistic fill time (competition-adjusted). More useful than total profit alone — a smaller flip that fills in 1h beats a huge flip that takes 3 days.">Coins/hr</th>
           <th data-col="capitalNeeded"
               data-tip="Coins locked up in the buy order. Always at or below your capital filter.">Capital Used</th>
           <th data-col="dailyVolume"
-              data-tip="Items traded per day. Higher volume means orders fill faster and the spread is less likely to be a trap.">Daily Vol.</th>
+              data-tip="Conservative daily volume — the lower of the two sides (buy orders vs. sell orders). Using the minimum gives a more honest picture than the average. A ↕ flag means one side is 3× bigger than the other, which can cause problems (see flag tooltip).">Daily Vol.</th>
           <th data-col="fillHrs"
-              data-tip="Rough estimate of how long your full buy order takes to fill based on daily volume. Does not account for your queue position.">Fill Time</th>
+              data-tip="Ideal fill time — how long your full buy order takes to fill assuming you are the only buyer. Reality will be slower.">Fill (Ideal)</th>
+          <th data-col="fillHrsRealistic"
+              data-tip="Realistic fill time after applying a competition penalty: Low = 1.5×, Medium = 3×, High = 6×. These multipliers are approximate — treat them as order-of-magnitude estimates, not precise predictions.">Fill (Real)</th>
           <th data-col="compLevel"
               data-tip="Total active buy orders in the order book. More orders = more people potentially jumping your queue. Low ≤15, Medium ≤40, High 41+.">Competition</th>
           <th data-col="score" class="sort-active sort-desc"
-              data-tip="Composite score weighting margin %, flat margin, volume, and fill time equally. Use as a starting point — not a final answer.">Score</th>
+              data-tip="Composite score (0–100) using percentile-clamped normalization across 4 factors: margin % (30%), flat margin (25%), daily volume (25%), realistic fill time (20%). Outliers are clamped to the 5th–95th percentile range so one extreme item can't distort everyone else's score.">Score</th>
           <th class="no-sort"
-              data-tip="Dead market warning: spread is very wide but weekly volume is very low. Could be a manipulation trap, or an item that simply never fills.">⚠</th>
+              data-tip="Dead market warning: spread >8%, very low weekly volume, and very few orders. Likely a planted spread or dormant item — almost certainly won't fill at these prices.">⚠</th>
         </tr>
       </thead>
       <tbody id="tableBody"></tbody>
@@ -471,7 +498,7 @@
 <div id="col-tooltip"></div>
 
 <script>
-// ─── CONFIG ────────────────────────────────────────────
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
 const API_DIRECT  = 'https://api.hypixel.net/v2/skyblock/bazaar';
 const CORS_PROXY  = 'https://corsproxy.io/?url=';
 const TAX         = 0.0125;
@@ -480,19 +507,43 @@ const REFRESH_SEC = 60;
 const CIRC        = 2 * Math.PI * 16;
 const DEFAULTS    = { capital: '50m', margin: '50', pct: '1', vol: '5k' };
 
-// ─── STATE ─────────────────────────────────────────────
-let allItems       = [];
-let rawProducts    = null; // cached API data
+// Competition fill-time multipliers (Low / Medium / High).
+// These are rough order-of-magnitude estimates, not exact science.
+const COMP_MULT   = [1.5, 3.0, 6.0];
+
+// Dead-market thresholds
+const DEAD_MARGIN_PCT    = 8;      // margin % above this is suspicious
+const DEAD_WEEKLY_VOL    = 10000;  // max weekly vol (using Math.max of both sides)
+const DEAD_MAX_ORDERS    = 5;      // very few orders on the book
+
+// Volume imbalance: flag if one side is this many times larger than the other
+const VOL_IMBAL_RATIO = 3;
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+let rawProducts    = null;   // raw API response — invalidated only on new fetch
+let cachedItems    = [];     // computeItem results at lastCapital — reused across filter changes
+let lastCapital    = -1;     // sentinel; -1 forces first compute
+let allItems       = [];     // filtered subset of cachedItems after margin/pct/vol/dead pass
 let sortCol        = 'score';
 let sortDir        = 'desc';
 let timerCount     = REFRESH_SEC;
 let timerInterval  = null;
 let useCorsProxy   = false;
 let isFirstLoad    = true;
+let isFetching     = false;
 let hideDeadMarket = false;
 
-// ─── PARSE SHORTHAND NUMBERS ───────────────────────────
-// "1.5k" → 1500 | "1.89m" → 1890000 | "2b" → 2000000000 | "50" → 50
+// ─── COLUMN LABELS (shared between status bar and renderTable) ───────────────
+const COL_LABELS = {
+  name: 'Item', buyPrice: 'Buy Order', sellPrice: 'Sell Order',
+  netMargin: 'Margin/Item', marginPct: 'Margin %', totalProfit: 'Est. Profit',
+  coinsPerHour: 'Coins/hr', capitalNeeded: 'Capital Used',
+  dailyVolume: 'Daily Vol.', fillHrs: 'Fill (Ideal)',
+  fillHrsRealistic: 'Fill (Real)', compLevel: 'Competition', score: 'Score',
+};
+
+// ─── PARSE SHORTHAND NUMBERS ─────────────────────────────────────────────────
+// "1.5k" → 1500 | "1.89m" → 1890000 | "2b" → 2e9 | "50" → 50
 function parseVal(raw) {
   if (raw == null) return 0;
   const s = String(raw).trim().toLowerCase().replace(/,/g, '');
@@ -506,16 +557,16 @@ function parseVal(raw) {
   return n;
 }
 
-// ─── FORMAT HELPERS ────────────────────────────────────
+// ─── FORMAT HELPERS ──────────────────────────────────────────────────────────
 const fmt = {
   coins(n) {
-    if (!isFinite(n)) return '—';
+    if (!isFinite(n) || n === 0) return '—';
     if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
     if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
     if (n >= 1e3) return (n / 1e3).toFixed(1) + 'k';
     return n.toFixed(1);
   },
-  pct(n) { return isFinite(n) ? n.toFixed(2) + '%' : '—'; },
+  pct(n)  { return isFinite(n) ? n.toFixed(2) + '%' : '—'; },
   hrs(n) {
     if (!isFinite(n) || n >= 9999) return '>99d';
     if (n < 1 / 60)    return '<1m';
@@ -528,10 +579,10 @@ const fmt = {
     return id.split('_')
       .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
       .join(' ');
-  }
+  },
 };
 
-// ─── GET FILTERS ───────────────────────────────────────
+// ─── GET FILTERS ─────────────────────────────────────────────────────────────
 function getFilters() {
   return {
     capital:   parseVal(document.getElementById('f-capital').value) || 0,
@@ -541,7 +592,9 @@ function getFilters() {
   };
 }
 
-// ─── COMPUTE ONE ITEM ──────────────────────────────────
+// ─── COMPUTE ONE ITEM ────────────────────────────────────────────────────────
+// Pure function — only depends on product data + capital.
+// Called once per product per capital value; results are cached in cachedItems.
 function computeItem(id, product, capital) {
   const { sell_summary, buy_summary, quick_status } = product;
   if (!sell_summary?.length || !buy_summary?.length) return null;
@@ -561,65 +614,287 @@ function computeItem(id, product, capital) {
   const marginPct = (netMargin / buyPrice) * 100;
   const qs        = quick_status || {};
 
-  // buyMovingWeek is often 0 from the API — use Math.max
-  const sellMW      = qs.sellMovingWeek || 0;
-  const buyMW       = qs.buyMovingWeek  || 0;
-  const dailyVolume = Math.max(sellMW, buyMW) / 7;
+  // Volume sides:
+  //   sellMovingWeek = items moved via sell orders (fills YOUR buy order)
+  //   buyMovingWeek  = items moved via buy orders  (fills YOUR sell order later)
+  const sellMW = qs.sellMovingWeek || 0;
+  const buyMW  = qs.buyMovingWeek  || 0;
+
+  // Conservative daily volume: use the lower side.
+  // If one side is much smaller the flip will stall at that stage.
+  const minWeekly  = Math.min(sellMW, buyMW);
+  const maxWeekly  = Math.max(sellMW, buyMW);
+  const dailyVolume = minWeekly / 7;
+
+  // Volume imbalance: flag if either side is >VOL_IMBAL_RATIO× the other.
+  // When both are 0 there's no imbalance signal (just no volume at all).
+  let volImbalance = false;
+  let volImbalanceTip = '';
+  if (minWeekly > 0 && maxWeekly / minWeekly > VOL_IMBAL_RATIO) {
+    volImbalance = true;
+    // Identify which side is thin and what that means for the flipper
+    if (sellMW < buyMW) {
+      volImbalanceTip = `Sell orders are thin (${fmt.coins(sellMW / 7)}/d vs ${fmt.coins(buyMW / 7)}/d buys). ` +
+        `Your buy order may fill much slower than expected — few people are selling into the market.`;
+    } else {
+      volImbalanceTip = `Buy orders are thin (${fmt.coins(buyMW / 7)}/d vs ${fmt.coins(sellMW / 7)}/d sells). ` +
+        `After your order fills, selling may be slow — few people are buying from the market.`;
+    }
+  } else if (minWeekly === 0 && maxWeekly > 0) {
+    // One side is completely dead
+    volImbalance = true;
+    volImbalanceTip = sellMW === 0
+      ? `Zero sell volume — nobody is selling into this market. Your buy order will never fill.`
+      : `Zero buy volume — nobody is buying from this market. You won't be able to sell after your order fills.`;
+  }
 
   const maxQty       = Math.min(MAX_QTY, Math.floor(capital / buyPrice));
   if (maxQty <= 0) return null;
 
   const totalProfit   = netMargin * maxQty;
   const capitalNeeded = buyPrice  * maxQty;
-  const fillHrs       = dailyVolume > 0 ? maxQty / (dailyVolume / 24) : 99999;
 
-  // Competition = total buy orders in the book
-  // quick_status.sellOrders = orders on sell_summary (bid) side
+  // Ideal fill time: assumes you're the only buyer with full volume
+  const fillHrs = dailyVolume > 0 ? maxQty / (dailyVolume / 24) : 99999;
+
+  // Competition level from order book depth (quick_status.sellOrders = bid-side orders)
   const totalBuyOrders = qs.sellOrders || 1;
-  const competition    = totalBuyOrders <= 15 ? 'Low'
-                       : totalBuyOrders <= 40 ? 'Medium'
-                       : 'High';
   const compLevel      = totalBuyOrders <= 15 ? 0
                        : totalBuyOrders <= 40 ? 1
                        : 2;
+  const competition    = ['Low', 'Medium', 'High'][compLevel];
 
-  // Dead market flag: wide spread + very low volume
-  const isManipulated = marginPct > 10 && Math.max(sellMW, buyMW) < 10000;
+  // Realistic fill time: multiply by competition penalty
+  // Rationale: more competing buy orders means your queue position is worse
+  // and you get a smaller share of incoming sell volume.
+  const fillHrsRealistic = fillHrs >= 9999 ? 99999 : fillHrs * COMP_MULT[compLevel];
+
+  // Coins per hour (based on realistic fill — more useful for comparing flips of different scale)
+  const coinsPerHour = (fillHrsRealistic > 0 && fillHrsRealistic < 9999)
+    ? totalProfit / fillHrsRealistic
+    : 0;
+
+  // Dead market: wide margin + tiny total volume + very few orders = likely planted spread
+  // Using maxWeekly for this check (if even the busier side is dead, the item truly has no activity)
+  const isManipulated = marginPct > DEAD_MARGIN_PCT
+    && maxWeekly < DEAD_WEEKLY_VOL
+    && totalBuyOrders < DEAD_MAX_ORDERS;
 
   return {
     id, name: fmt.name(id),
     buyPrice, sellPrice, netMargin, marginPct,
     totalProfit, capitalNeeded,
-    dailyVolume, fillHrs,
+    sellMovingWeek: sellMW, buyMovingWeek: buyMW,
+    dailyVolume, volImbalance, volImbalanceTip,
+    fillHrs, fillHrsRealistic, coinsPerHour,
     competition, compLevel, totalBuyOrders,
-    sellMovingWeek: sellMW,
-    isManipulated, score: 0,
+    isManipulated,
+    score: 0, // filled in by computeScores()
   };
 }
 
-// ─── COMPOSITE SCORE ───────────────────────────────────
-function computeScores(items) {
-  if (items.length < 2) { items.forEach(i => i.score = 50); return; }
-  function norm(v, arr) {
-    const lo = Math.min(...arr), hi = Math.max(...arr);
-    return hi === lo ? 0.5 : (v - lo) / (hi - lo);
+// ─── PRECOMPUTE ALL ITEMS FOR GIVEN CAPITAL ──────────────────────────────────
+// Only re-run when capital changes or on a fresh fetch.
+function computeAllItems(capital) {
+  if (!rawProducts) return;
+  lastCapital = capital;
+  cachedItems = [];
+  for (const [id, product] of Object.entries(rawProducts)) {
+    const item = computeItem(id, product, capital);
+    if (item) cachedItems.push(item);
   }
-  const mpArr  = items.map(i => i.marginPct);
-  const nmArr  = items.map(i => i.netMargin);
-  const volArr = items.map(i => i.dailyVolume);
-  const fhArr  = items.map(i => i.fillHrs);
-  items.forEach(it => {
+}
+
+// ─── COMPOSITE SCORE (percentile-clamped normalization) ──────────────────────
+// Clamp each dimension to the 5th–95th percentile range before normalising.
+// This prevents one extreme outlier from compressing everyone else into a
+// narrow band at the bottom of the 0–1 scale.
+function computeScores(items) {
+  if (!items.length) return;
+  if (items.length === 1) { items[0].score = 50; return; }
+
+  function clampedNorm(arr) {
+    const s   = [...arr].sort((a, b) => a - b);
+    const n   = s.length;
+    const lo  = s[Math.max(0, Math.floor(n * 0.05))];
+    const hi  = s[Math.min(n - 1, Math.floor(n * 0.95))];
+    if (hi === lo) return arr.map(() => 0.5);
+    return arr.map(v => (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
+  }
+
+  const mpN  = clampedNorm(items.map(i => i.marginPct));
+  const nmN  = clampedNorm(items.map(i => i.netMargin));
+  const volN = clampedNorm(items.map(i => i.dailyVolume));
+  const fhN  = clampedNorm(items.map(i => i.fillHrsRealistic));
+
+  items.forEach((it, i) => {
     it.score = (
-      norm(it.marginPct,   mpArr)  * 0.30 +
-      norm(it.netMargin,   nmArr)  * 0.30 +
-      norm(it.dailyVolume, volArr) * 0.25 +
-      (1 - norm(it.fillHrs, fhArr)) * 0.15
+      mpN[i]  * 0.30 +
+      nmN[i]  * 0.25 +
+      volN[i] * 0.25 +
+      (1 - fhN[i]) * 0.20   // inverted: lower fill time = better
     ) * 100;
   });
 }
 
-// ─── FETCH ─────────────────────────────────────────────
+// ─── APPLY FILTERS + SCORE + RENDER ─────────────────────────────────────────
+// Recomputes items only when capital changes; otherwise just re-filters cachedItems.
+function applyFilters(fromFetch = false) {
+  if (!rawProducts) return;
+  const filters = getFilters();
+
+  // Recompute the full item set only when capital changes (or on fresh fetch).
+  if (filters.capital !== lastCapital) {
+    computeAllItems(filters.capital);
+  }
+
+  // Filter the cheap way — no re-parsing of the API data
+  let items = cachedItems.filter(item =>
+    item.netMargin   >= filters.minMargin &&
+    item.marginPct   >= filters.minPct    &&
+    item.dailyVolume >= filters.minVol
+  );
+  if (hideDeadMarket) {
+    items = items.filter(i => !i.isManipulated);
+  }
+  allItems = items;
+
+  // Score normalization runs on the visible set so outlier items you've
+  // filtered out don't compress the scores of everything you're looking at.
+  computeScores(allItems);
+
+  setStatus('live');
+  const shouldAnimate = fromFetch && isFirstLoad;
+  renderTable(shouldAnimate);
+
+  if (fromFetch) {
+    isFirstLoad = false;
+    const t = new Date();
+    document.getElementById('lastUpdated').textContent =
+      `Updated ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+  }
+
+  document.getElementById('resultCount').textContent  = allItems.length;
+  document.getElementById('sortLabel').textContent     = COL_LABELS[sortCol] || sortCol;
+}
+
+// ─── SORT ────────────────────────────────────────────────────────────────────
+// Always operates on a shallow copy — never mutates allItems.
+function sorted() {
+  return [...allItems].sort((a, b) => {
+    let av = a[sortCol], bv = b[sortCol];
+    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
+    if (av === bv) return 0;
+    return (av > bv ? 1 : -1) * (sortDir === 'asc' ? 1 : -1);
+  });
+}
+
+// ─── RENDER TABLE ────────────────────────────────────────────────────────────
+function renderTable(animate) {
+  const items = sorted();
+  const tbody = document.getElementById('tableBody');
+
+  if (!items.length) {
+    tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="14">
+      <div class="empty-state">
+        <div class="empty-icon">🪙</div>
+        <p>No flips match your current filters.</p>
+        <p>Try lowering the margin %, volume, or flat margin requirements.</p>
+      </div></td></tr>`;
+    return;
+  }
+
+  const rows = items.map((item, i) => {
+    const mColor  = item.marginPct    >= 5    ? 'td-green' : item.marginPct >= 2   ? 'td-amber' : 'td-dim';
+    const pColor  = item.totalProfit  >= 1e6  ? 'td-green' : item.totalProfit >= 2e5 ? 'td-amber' : 'td-dim';
+    const fColor  = item.fillHrsRealistic <= 6  ? 'td-green' : item.fillHrsRealistic <= 48 ? 'td-amber' : 'td-red';
+    const chColor = item.coinsPerHour >= 100e3  ? 'td-green' : item.coinsPerHour >= 20e3   ? 'td-amber' : 'td-dim';
+    const bClass  = ['badge-low', 'badge-medium', 'badge-high'][item.compLevel];
+    const score   = Math.round(item.score);
+    const delay   = animate ? i * 35 : 0;
+
+    // Dead market flag
+    const deadFlag = item.isManipulated
+      ? `<span class="flag-icon flag-dead" data-tip="Spread >8% but only ${fmt.coins(Math.max(item.sellMovingWeek, item.buyMovingWeek))} items moved last week with <${DEAD_MAX_ORDERS} orders — likely a planted spread or completely dead market.">⚠</span>`
+      : '';
+
+    // Volume imbalance flag — shown inline in the Daily Vol cell
+    const imbalFlag = item.volImbalance
+      ? `<span class="flag-icon flag-imbal" data-tip="${item.volImbalanceTip}">↕</span>`
+      : '';
+
+    return `<tr data-id="${item.id}" style="transition-delay:${delay}ms">
+      <td class="td-name" title="${item.id}">${item.name}</td>
+      <td class="td-mono td-dim">${fmt.coins(item.buyPrice)}</td>
+      <td class="td-mono td-dim">${fmt.coins(item.sellPrice)}</td>
+      <td class="td-mono ${mColor}">${fmt.coins(item.netMargin)}</td>
+      <td class="td-mono ${mColor}">${fmt.pct(item.marginPct)}</td>
+      <td class="td-mono ${pColor}">${fmt.coins(item.totalProfit)}</td>
+      <td class="td-mono ${chColor}">${item.coinsPerHour > 0 ? fmt.coins(item.coinsPerHour) + '/h' : '—'}</td>
+      <td class="td-mono td-dim">${fmt.coins(item.capitalNeeded)}</td>
+      <td class="td-mono td-dim" style="display:flex;align-items:center;gap:4px">
+        ${fmt.coins(item.dailyVolume)}/d${imbalFlag}
+      </td>
+      <td class="td-mono td-dim">${fmt.hrs(item.fillHrs)}</td>
+      <td class="td-mono ${fColor}">${fmt.hrs(item.fillHrsRealistic)}</td>
+      <td>
+        <span class="badge ${bClass}">
+          <span class="badge-dot"></span>${item.competition}
+          <span style="opacity:0.5;font-size:0.55rem;margin-left:2px">(${item.totalBuyOrders})</span>
+        </span>
+      </td>
+      <td>
+        <div class="score-wrap">
+          <div class="score-track">
+            <div class="score-fill" style="width:0%" data-target="${score}"></div>
+          </div>
+          <span class="score-num">${score}</span>
+        </div>
+      </td>
+      <td>${deadFlag}</td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = rows.join('');
+
+  requestAnimationFrame(() => {
+    tbody.querySelectorAll('tr').forEach((row, i) => {
+      setTimeout(() => {
+        row.classList.add('visible');
+        const fill = row.querySelector('.score-fill');
+        if (fill) fill.style.width = fill.dataset.target + '%';
+      }, animate ? i * 35 : 0);
+    });
+  });
+}
+
+// ─── SKELETON ────────────────────────────────────────────────────────────────
+function showSkeletons() {
+  // 14 columns
+  const widths = [140, 70, 70, 65, 55, 85, 80, 85, 90, 55, 55, 90, 50, 10];
+  document.getElementById('tableBody').innerHTML =
+    Array(10).fill(0).map(() =>
+      `<tr style="opacity:1;transform:none">${
+        widths.map(w => `<td><div class="skeleton-cell" style="width:${w}px"></div></td>`).join('')
+      }</tr>`
+    ).join('');
+}
+
+// ─── FETCH ───────────────────────────────────────────────────────────────────
+// Outer function guards against concurrent calls; inner handles CORS retry.
 async function fetchData() {
+  if (isFetching) return;
+  isFetching = true;
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('disabled');
+
+  await _fetchInner();
+
+  isFetching = false;
+  btn.classList.remove('disabled');
+}
+
+async function _fetchInner() {
   setStatus('loading');
   if (isFirstLoad) showSkeletons();
 
@@ -637,8 +912,8 @@ async function fetchData() {
   } catch (err) {
     if (!useCorsProxy) {
       useCorsProxy = true;
-      console.info('[WeirdFlip] Direct fetch blocked, retrying via CORS proxy…');
-      return fetchData();
+      console.info('[WeirdFlip] Direct fetch blocked — retrying via CORS proxy…');
+      return _fetchInner(); // recurse; isFetching stays true (correct)
     }
     setStatus('error');
     showError(`Could not reach Hypixel API — ${err.message}. Will retry in ${REFRESH_SEC}s.`);
@@ -647,137 +922,13 @@ async function fetchData() {
   }
 
   rawProducts = data.products;
+  // Force a full recompute on new fetch data by resetting lastCapital.
+  // Capital may not have changed but the prices certainly have.
+  lastCapital = -1;
   applyFilters(true);
 }
 
-// ─── APPLY FILTERS (no fetch) ──────────────────────────
-function applyFilters(fromFetch = false) {
-  if (!rawProducts) return;
-  const filters = getFilters();
-  const computed = [];
-  let _s = 0, _m = 0, _p = 0, _v = 0, _total = 0;
-
-  for (const [id, product] of Object.entries(rawProducts)) {
-    _total++;
-    const item = computeItem(id, product, filters.capital);
-    if (!item) continue; _s++;
-    if (item.netMargin   < filters.minMargin) continue; _m++;
-    if (item.marginPct   < filters.minPct)    continue; _p++;
-    if (item.dailyVolume < filters.minVol)    continue; _v++;
-    computed.push(item);
-  }
-
-  console.log(`[WeirdFlip] ${_total} → spread: ${_s} → margin: ${_m} → pct: ${_p} → vol: ${_v} → shown: ${computed.length}`);
-
-  computeScores(computed);
-  allItems = computed;
-  setStatus('live');
-  renderTable(fromFetch && isFirstLoad);
-  if (fromFetch) {
-    isFirstLoad = false;
-    const t = new Date();
-    document.getElementById('lastUpdated').textContent =
-      `Updated ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
-  }
-}
-
-// ─── SORT + FILTER ─────────────────────────────────────
-function sorted() {
-  let items = hideDeadMarket ? allItems.filter(i => !i.isManipulated) : [...allItems];
-  return items.sort((a, b) => {
-    let av = a[sortCol], bv = b[sortCol];
-    if (typeof av === 'string') { av = av.toLowerCase(); bv = bv.toLowerCase(); }
-    if (av === bv) return 0;
-    return (av > bv ? 1 : -1) * (sortDir === 'asc' ? 1 : -1);
-  });
-}
-
-// ─── RENDER TABLE ──────────────────────────────────────
-function renderTable(animate) {
-  const items = sorted();
-  const tbody = document.getElementById('tableBody');
-  const colLabels = {
-    name: 'Item', buyPrice: 'Buy Order', sellPrice: 'Sell Order',
-    netMargin: 'Margin/Item', marginPct: 'Margin %', totalProfit: 'Est. Profit',
-    capitalNeeded: 'Capital Used', dailyVolume: 'Daily Vol.',
-    fillHrs: 'Fill Time', compLevel: 'Competition', score: 'Score'
-  };
-  document.getElementById('resultCount').textContent = items.length;
-  document.getElementById('sortLabel').textContent = colLabels[sortCol] || sortCol;
-
-  if (!items.length) {
-    tbody.innerHTML = `<tr style="opacity:1;transform:none"><td colspan="12">
-      <div class="empty-state">
-        <div class="empty-icon">🪙</div>
-        <p>No flips match your current filters.</p>
-        <p>Try lowering the margin %, volume, or flat margin requirements.</p>
-      </div></td></tr>`;
-    return;
-  }
-
-  const rows = items.map((item, i) => {
-    const mColor = item.marginPct  >= 5   ? 'td-green' : item.marginPct >= 2  ? 'td-amber' : 'td-dim';
-    const pColor = item.totalProfit >= 1e6 ? 'td-green' : item.totalProfit >= 2e5 ? 'td-amber' : 'td-dim';
-    const fColor = item.fillHrs    <= 6   ? 'td-green' : item.fillHrs <= 48   ? 'td-amber' : 'td-red';
-    const bClass = item.compLevel === 0 ? 'badge-low' : item.compLevel === 1 ? 'badge-medium' : 'badge-high';
-    const flag   = item.isManipulated
-      ? `<span class="warn-flag" data-tip="Spread >10% but only ${fmt.coins(item.sellMovingWeek)} items moved last week — possible manipulation or dead market.">⚠</span>`
-      : '';
-    const score = Math.round(item.score);
-    const delay = animate ? i * 35 : 0;
-    return `<tr data-id="${item.id}" style="transition-delay:${delay}ms">
-      <td class="td-name" title="${item.id}">${item.name}</td>
-      <td class="td-mono td-dim">${fmt.coins(item.buyPrice)}</td>
-      <td class="td-mono td-dim">${fmt.coins(item.sellPrice)}</td>
-      <td class="td-mono ${mColor}">${fmt.coins(item.netMargin)}</td>
-      <td class="td-mono ${mColor}">${fmt.pct(item.marginPct)}</td>
-      <td class="td-mono ${pColor}">${fmt.coins(item.totalProfit)}</td>
-      <td class="td-mono td-dim">${fmt.coins(item.capitalNeeded)}</td>
-      <td class="td-mono td-dim">${fmt.coins(item.dailyVolume)}/d</td>
-      <td class="td-mono ${fColor}">${fmt.hrs(item.fillHrs)}</td>
-      <td>
-        <span class="badge ${bClass}">
-          <span class="badge-dot"></span>${item.competition}
-          <span style="opacity:0.5;font-size:0.55rem;margin-left:2px">(${item.totalBuyOrders})</span>
-        </span>
-      </td>
-      <td>
-        <div class="score-wrap">
-          <div class="score-track">
-            <div class="score-fill" style="width:0%" data-target="${score}"></div>
-          </div>
-          <span class="score-num">${score}</span>
-        </div>
-      </td>
-      <td>${flag}</td>
-    </tr>`;
-  });
-
-  tbody.innerHTML = rows.join('');
-
-  requestAnimationFrame(() => {
-    tbody.querySelectorAll('tr').forEach((row, i) => {
-      setTimeout(() => {
-        row.classList.add('visible');
-        const fill = row.querySelector('.score-fill');
-        if (fill) fill.style.width = fill.dataset.target + '%';
-      }, animate ? i * 35 : 0);
-    });
-  });
-}
-
-// ─── SKELETON ──────────────────────────────────────────
-function showSkeletons() {
-  const widths = [140, 70, 70, 65, 55, 85, 85, 80, 55, 90, 50, 10];
-  document.getElementById('tableBody').innerHTML =
-    Array(10).fill(0).map(() =>
-      `<tr style="opacity:1;transform:none">${
-        widths.map(w => `<td><div class="skeleton-cell" style="width:${w}px"></div></td>`).join('')
-      }</tr>`
-    ).join('');
-}
-
-// ─── STATUS ────────────────────────────────────────────
+// ─── STATUS ──────────────────────────────────────────────────────────────────
 function setStatus(s) {
   const dot = document.getElementById('liveDot');
   const lbl = document.getElementById('liveStatus');
@@ -794,7 +945,7 @@ function hideError() {
   document.getElementById('errorBanner').style.display = 'none';
 }
 
-// ─── TIMER ─────────────────────────────────────────────
+// ─── TIMER ───────────────────────────────────────────────────────────────────
 function startTimer() {
   timerCount = REFRESH_SEC;
   if (timerInterval) clearInterval(timerInterval);
@@ -811,7 +962,7 @@ document.getElementById('refreshBtn').addEventListener('click', () => {
   fetchData().then(startTimer);
 });
 
-// ─── SORT HEADERS ──────────────────────────────────────
+// ─── SORT HEADERS ────────────────────────────────────────────────────────────
 document.querySelectorAll('th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
@@ -820,11 +971,12 @@ document.querySelectorAll('th[data-col]').forEach(th => {
     document.querySelectorAll('th').forEach(h =>
       h.classList.remove('sort-active', 'sort-asc', 'sort-desc'));
     th.classList.add('sort-active', sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+    document.getElementById('sortLabel').textContent = COL_LABELS[sortCol] || sortCol;
     renderTable(false);
   });
 });
 
-// ─── FILTER INPUTS ─────────────────────────────────────
+// ─── FILTER INPUTS ───────────────────────────────────────────────────────────
 let filterDebounce;
 function onFilterChange() {
   ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id => {
@@ -832,14 +984,13 @@ function onFilterChange() {
     const v  = parseVal(el.value);
     el.classList.toggle('invalid', isNaN(v) || v < 0);
   });
-  // Re-process cached data only — no API call
   clearTimeout(filterDebounce);
   filterDebounce = setTimeout(() => applyFilters(false), 300);
 }
 ['f-capital', 'f-margin', 'f-pct', 'f-vol'].forEach(id =>
   document.getElementById(id).addEventListener('input', onFilterChange));
 
-// ─── RESET ─────────────────────────────────────────────
+// ─── RESET ───────────────────────────────────────────────────────────────────
 document.getElementById('resetBtn').addEventListener('click', () => {
   document.getElementById('f-capital').value = DEFAULTS.capital;
   document.getElementById('f-margin').value  = DEFAULTS.margin;
@@ -851,16 +1002,17 @@ document.getElementById('resetBtn').addEventListener('click', () => {
   applyFilters(false);
 });
 
-// ─── DEAD MARKET TOGGLE ────────────────────────────────
+// ─── DEAD MARKET TOGGLE ──────────────────────────────────────────────────────
+// Calls applyFilters (not just renderTable) so score normalization also
+// excludes dead items from the percentile calculation.
 document.getElementById('deadToggle').addEventListener('click', () => {
   hideDeadMarket = !hideDeadMarket;
-  const el = document.getElementById('deadToggle');
-  el.classList.toggle('active', hideDeadMarket);
+  document.getElementById('deadToggle').classList.toggle('active', hideDeadMarket);
   document.getElementById('toggleStateText').textContent = hideDeadMarket ? 'On' : 'Off';
-  renderTable(false);
+  applyFilters(false);
 });
 
-// ─── COLUMN HEADER TOOLTIPS (500ms delay) ──────────────
+// ─── COLUMN HEADER TOOLTIPS (500ms delay) ────────────────────────────────────
 const colTooltip = document.getElementById('col-tooltip');
 let tipTimer = null;
 
@@ -872,7 +1024,7 @@ document.querySelectorAll('th[data-tip]').forEach(th => {
       colTooltip.textContent = th.dataset.tip;
       colTooltip.classList.add('visible');
       let left = r.left;
-      if (left + 240 > window.innerWidth - 12) left = window.innerWidth - 252;
+      if (left + 260 > window.innerWidth - 12) left = window.innerWidth - 272;
       colTooltip.style.left = Math.max(8, left) + 'px';
       colTooltip.style.top  = (r.bottom + 6) + 'px';
     }, 500);
@@ -887,8 +1039,8 @@ document.querySelectorAll('th[data-tip]').forEach(th => {
   });
 });
 
-// ─── INIT ──────────────────────────────────────────────
-document.getElementById('ringProgress').style.strokeDasharray = CIRC;
+// ─── INIT ────────────────────────────────────────────────────────────────────
+document.getElementById('ringProgress').style.strokeDasharray  = CIRC;
 document.getElementById('ringProgress').style.strokeDashoffset = 0;
 fetchData().then(startTimer);
 </script>
