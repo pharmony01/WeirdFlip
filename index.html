@@ -266,6 +266,11 @@
       font-family: var(--font-body); font-weight: 600; color: var(--text);
       max-width: 200px; overflow: hidden; text-overflow: ellipsis;
       transition: color 0.2s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .item-icon {
+      width: 24px; height: 24px; border-radius: 4px;
+      flex-shrink: 0; image-rendering: pixelated;
     }
     .td-mono { font-family: var(--font-mono); font-size: 0.8rem; }
     .td-green { color: var(--green); }
@@ -795,7 +800,14 @@ function renderTable(animate) {
       : '';
 
     return `<tr data-id="${item.id}" style="transition-delay:${delay}ms">
-      <td class="td-name" title="${item.id}">${item.name}</td>
+      <td class="td-name" title="${item.id}">
+        <img class="item-icon"
+             src="https://sky.coflnet.com/static/icon/${item.id}"
+             alt=""
+             loading="lazy"
+             onerror="this.style.display='none'">
+        ${item.name}
+      </td>
       <td class="td-mono td-dim">${fmt.coins(item.buyPrice)}</td>
       <td class="td-mono td-dim">${fmt.coins(item.sellPrice)}</td>
       <td class="td-mono ${mColor}">${fmt.coins(item.netMargin)}</td>
