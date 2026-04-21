@@ -737,34 +737,72 @@ function computeAllItems(capital) {
   }
 }
 
-// ─── COMPOSITE SCORE (percentile-clamped normalization) ──────────────────────
-// Clamp each dimension to the 5th–95th percentile range before normalising.
-// This prevents one extreme outlier from compressing everyone else into a
-// narrow band at the bottom of the 0–1 scale.
+// ─── COMPOSITE SCORE ─────────────────────────────────────────────────────────
+//
+// Weights:
+//   55% — Coins/hr       log-scaled  100k–30M floor/ceiling
+//   25% — Daily volume   percentile-clamped (relative liquidity confidence)
+//   15% — Margin %       log-scaled  0.5%–50% floor/ceiling
+//    5% — Ideal fill time absolute curve (small nudge vs. genuinely illiquid markets)
+//
+// Why log-scaling for coins/hr and margin %:
+//   Raw normalization lets a 6000% margin or a 45M/hr item completely dominate.
+//   Log compression means 6000% and 100% are treated similarly (both "great"),
+//   and the real differentiation happens in the meaningful 0.5%–50% range.
+//
+// Why absolute curve for fill time instead of relative:
+//   Fill time is capital-dependent — same item, same coins/hr, just different
+//   order sizes. Comparing fill times relative to each other would penalise
+//   high-capital users for no reason. The absolute curve only flags genuinely
+//   illiquid markets (multi-week fills = something is wrong).
+//
+// Why percentile-clamped for volume:
+//   Volume is a relative confidence signal — "is this more or less liquid than
+//   the other options I'm looking at?" Relative normalization is appropriate.
 function computeScores(items) {
   if (!items.length) return;
   if (items.length === 1) { items[0].score = 50; return; }
 
+  // Log-scale normalizer: clamps v to [lo, hi] then normalises in log10 space.
+  function logNorm(v, lo, hi) {
+    const clamped = Math.max(lo, Math.min(hi, v));
+    return (Math.log10(clamped) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
+  }
+
+  // Percentile-clamped normalizer: 5th–95th percentile range.
   function clampedNorm(arr) {
-    const s   = [...arr].sort((a, b) => a - b);
-    const n   = s.length;
-    const lo  = s[Math.max(0, Math.floor(n * 0.05))];
-    const hi  = s[Math.min(n - 1, Math.floor(n * 0.95))];
+    const s  = [...arr].sort((a, b) => a - b);
+    const n  = s.length;
+    const lo = s[Math.max(0, Math.floor(n * 0.05))];
+    const hi = s[Math.min(n - 1, Math.floor(n * 0.95))];
     if (hi === lo) return arr.map(() => 0.5);
     return arr.map(v => (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo));
   }
 
-  const mpN  = clampedNorm(items.map(i => i.marginPct));
-  const nmN  = clampedNorm(items.map(i => i.netMargin));
-  const volN = clampedNorm(items.map(i => i.dailyVolume));
-  const fhN  = clampedNorm(items.map(i => i.fillHrsRealistic));
+  // Absolute fill-time penalty curve (ideal hours, not realistic).
+  // Capital-dependent by nature — only penalises markets that are fundamentally
+  // illiquid regardless of order size.
+  function fillCurve(hrs) {
+    if (hrs <= 24)  return 1.00;
+    if (hrs <= 72)  return 0.70;
+    if (hrs <= 168) return 0.40;
+    if (hrs <= 720) return 0.15;
+    return 0.05;
+  }
 
-  items.forEach((it, i) => {
+  const volN = clampedNorm(items.map(i => i.dailyVolume));
+
+  items.forEach((it, idx) => {
+    const chScore  = logNorm(it.coinsPerHour, 100_000,  30_000_000); // 100k–30M
+    const mpScore  = logNorm(it.marginPct,    0.5,       50);         // 0.5%–50%
+    const volScore = volN[idx];
+    const fhScore  = fillCurve(it.fillHrs);
+
     it.score = (
-      mpN[i]  * 0.25 +
-      nmN[i]  * 0.20 +
-      volN[i] * 0.20 +
-      (1 - fhN[i]) * 0.35   // inverted: lower fill time = better (dominant factor)
+      chScore  * 0.55 +
+      volScore * 0.25 +
+      mpScore  * 0.15 +
+      fhScore  * 0.05
     ) * 100;
   });
 }
@@ -855,7 +893,9 @@ function renderTable(animate) {
     const mColor  = item.marginPct    >= 5    ? 'td-green' : item.marginPct >= 2   ? 'td-amber' : 'td-dim';
     const pColor  = item.totalProfit  >= 1e6  ? 'td-green' : item.totalProfit >= 2e5 ? 'td-amber' : 'td-dim';
     const fColor  = item.fillHrsRealistic <= 6  ? 'td-green' : item.fillHrsRealistic <= 48 ? 'td-amber' : 'td-red';
-    const chColor = item.coinsPerHour >= 100e3  ? 'td-green' : item.coinsPerHour >= 20e3   ? 'td-amber' : 'td-dim';
+    const chColor = item.coinsPerHour >= 1.5e6 ? 'td-green'
+                  : item.coinsPerHour >= 1e6   ? 'td-amber'
+                  : 'td-dim';
     const bClass  = ['badge-low', 'badge-medium', 'badge-high'][item.compLevel];
     const score   = Math.round(item.score);
     const delay   = animate ? i * 35 : 0;
