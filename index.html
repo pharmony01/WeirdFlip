@@ -657,10 +657,15 @@ function computeItem(id, product, capital) {
   const { sell_summary, buy_summary, quick_status } = product;
   if (!sell_summary?.length || !buy_summary?.length) return null;
 
-  // Place buy order just above the top buyer (to be first in queue)
-  const buyPrice  = buy_summary[0].pricePerUnit  + 0.1;
-  // Place sell order just below the top seller
-  const sellPrice = sell_summary[0].pricePerUnit - 0.1;
+  // NOTE: Hypixel's naming is inverted from what you'd expect:
+  //   sell_summary = the BID side (players who posted BUY orders, wanting to buy)
+  //   buy_summary  = the ASK side (players who posted SELL orders, wanting to sell)
+  //
+  // To flip, we:
+  //   - Place a BUY ORDER just above the current top bidder  → sell_summary[0] + 0.1
+  //   - Place a SELL ORDER just below the current top asker  → buy_summary[0]  - 0.1
+  const buyPrice  = sell_summary[0].pricePerUnit + 0.1;
+  const sellPrice = buy_summary[0].pricePerUnit  - 0.1;
 
   if (sellPrice <= buyPrice || buyPrice <= 0) return null;
 
@@ -683,8 +688,8 @@ function computeItem(id, product, capital) {
     ? maxQty / (dailyVolume / 24)
     : 99999;
 
-  // Competition: orders sitting at the top of the buy book at the same price
-  const topOrders = buy_summary[0].orders || 1;
+  // Competition: other buy orders at the top of the bid book (sell_summary = bid side)
+  const topOrders = sell_summary[0].orders || 1;
   const competition = topOrders <= 3 ? 'Low' : topOrders <= 12 ? 'Medium' : 'High';
   const compLevel   = topOrders <= 3 ? 0 : topOrders <= 12 ? 1 : 2;
 
