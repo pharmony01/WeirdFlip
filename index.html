@@ -834,6 +834,9 @@ function renderTable(animate) {
   });
 
   tbody.innerHTML = rows.join('');
+  tbody.querySelectorAll('.td-name').forEach(el => {
+    el.style.fontSize = el.scrollWidth > el.clientWidth ? '0.68rem' : '';
+  });
 
   requestAnimationFrame(() => {
     tbody.querySelectorAll('tr').forEach((row, i) => {
